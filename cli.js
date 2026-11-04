@@ -1,5 +1,6 @@
 // cli.js:
- 
+// Run from the project directory console with 'node cli.js'.
+
 require('dotenv').config()
 const { Sequelize, QueryTypes } = require('sequelize')
 

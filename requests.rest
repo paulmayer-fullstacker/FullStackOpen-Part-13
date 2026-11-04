@@ -1,0 +1,28 @@
+# requests.rest
+# REST Client script to test API routes.
+@baseUrl = http://localhost:3001/api/blogs
+### Get all blogs
+GET {{baseUrl}}
+
+### Add a new blog (Success case)
+POST {{baseUrl}}
+Content-Type: application/json
+
+{
+  "author": "Rest Client Test 1",
+  "url": "https://restclienttest1.org/",
+  "title": "REST Client testing from VSCode",
+  "likes": 42
+}
+
+### Add a blog with missing required field (Failure/Validation test)
+POST {{baseUrl}}
+Content-Type: application/json
+
+{
+  "author": "Rest Client Test X"
+}
+
+### Delete a blog by id (/id). 
+# Use 'Get all blogs' to identify blog to delete
+DELETE {{baseUrl}}/5
