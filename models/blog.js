@@ -36,7 +36,4 @@ Blog.init({
   modelName: 'blog'  // Sets the internal name of the model in singular form (blog). For internal Sequelize tracking purposes.
 })
 
-// Automatically create the table if it does not exist
-Blog.sync()
-
 module.exports = Blog

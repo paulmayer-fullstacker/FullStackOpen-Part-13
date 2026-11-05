@@ -23,6 +23,14 @@ Content-Type: application/json
   "author": "Rest Client Test X"
 }
 
-### Delete a blog by id (/id). 
+### Delete a blog by valid existing id (/id). 
 # Use 'Get all blogs' to identify blog to delete
-DELETE {{baseUrl}}/5
+DELETE {{baseUrl}}/6
+
+### Delete a blog with valid non-existing id.
+# Triggers the blogFinder guard clause: if (!req.blog) return 404
+DELETE {{baseUrl}}/999999
+
+### Delete a blog by malformed id (400 Bad Request test)
+# Triggers the blogFinder catch block. PostgreSQL cannot query an int column with a string.
+DELETE {{baseUrl}}/abc

@@ -3,7 +3,7 @@
 
 require('dotenv').config()
 const { sequelize } = require('./utils/db')
-const Blog = require('./models/blog')
+const { Blog } = require('./models') // Import Blog from our centralised models entry point.
 const seedBlogs = require('./utils/seedingBlogData') // Import our seeding blogs data object (array).
 
 const seedDatabase = async () => {
@@ -21,10 +21,10 @@ const seedDatabase = async () => {
       await Blog.create(blog)
     }
 
-    console.log('Seeding success! ${seedBlogs.length} blogs inserted.')
+    console.log(`Seeding success! ${seedBlogs.length} blogs inserted.`)
     process.exit(0)
   } catch (error) {
-    console.error('Error seeding the database:', error)
+    console.error(`Error seeding the database:`, error)
     process.exit(1)
   }
 }
