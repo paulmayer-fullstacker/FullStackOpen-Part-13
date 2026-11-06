@@ -158,3 +158,19 @@ npm start
 **Testing the Endpoints:**
 
 Open the `requests.rest` file in VS Code and click **Send Request** above any of the defined blocks to test success paths, missing fields, non-existent 404 items, and malformed IDs against our running API (`http://localhost:3001/api/blogs`).
+
+## Blog List Backend Exercise-6
+
+That was easy! For a PUT /api/blogs/:id request, the main challenge is to correctly identify the required blog by its id. In that respect, the Blog.findByPk middleware function can do all the heavey lifting for us.
+
+The `blogFinder` already handles:
+
+- Looking up the blog by its ID (`Blog.findByPk`)
+
+- Catching malformed IDs (sending a 400 error)
+
+- Catching missing blogs (sending a 404 error)
+
+- Attaching the found blog to `req.blog`
+
+See the new `PUT` route in `controllers/blogs.js` and the new `PUT` test script in `requests.rest`.

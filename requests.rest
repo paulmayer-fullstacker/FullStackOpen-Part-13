@@ -23,6 +23,14 @@ Content-Type: application/json
   "author": "Rest Client Test X"
 }
 
+### Update the likes of a specific blog, by id (/id)
+PUT {{baseUrl}}/1
+Content-Type: application/json
+
+{
+  "likes": 5
+}
+
 ### Delete a blog by valid existing id (/id). 
 # Use 'Get all blogs' to identify blog to delete
 DELETE {{baseUrl}}/6
