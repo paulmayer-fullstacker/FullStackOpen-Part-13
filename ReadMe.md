@@ -174,3 +174,25 @@ The `blogFinder` already handles:
 - Attaching the found blog to `req.blog`
 
 See the new `PUT` route in `controllers/blogs.js` and the new `PUT` test script in `requests.rest`.
+
+
+## Blog List Backend Exercise-7
+
+In Exercise-6 our route handlers (like `POST` and `PUT`) used individual `try/catch` blocks to catch database errors and send a `400` response.
+
+Exercise-7 calls for centralised error handling, where we:
+
+- Remove the repetitive `try/catch` blocks from the controllers.
+
+- Pass any errors down to Express automatically using `next(error)`.
+
+- Create a single, dedicated error-handling middleware function at the very end of our application pipeline that catches these errors and decides how to respond to the client.
+
+Files updated:
+- **`utils/middleware.js`**: Created the 4-argument `errorHandler` function.
+
+- **`index.js`**: Registered the error handler at the end of the middleware pipeline.
+
+- **`controllers/blogs.js`**: Removed `try/catch` blocks and passed errors via `next(error)`.
+
+---

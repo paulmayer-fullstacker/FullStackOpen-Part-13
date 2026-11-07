@@ -15,7 +15,7 @@ Content-Type: application/json
   "likes": 42
 }
 
-### Add a blog with missing required field (Failure/Validation test)
+### Test POST error handling: Add a blog with missing required field (Failure/Validation test)
 POST {{baseUrl}}
 Content-Type: application/json
 
@@ -24,16 +24,24 @@ Content-Type: application/json
 }
 
 ### Update the likes of a specific blog, by id (/id)
-PUT {{baseUrl}}/1
+PUT {{baseUrl}}/4
 Content-Type: application/json
 
 {
-  "likes": 5
+  "likes": 40
+}
+
+### Test PUT error handling (Invalid likes data type)
+PUT {{baseUrl}}/4
+Content-Type: application/json
+
+{
+  "likes": "not-a-number"
 }
 
 ### Delete a blog by valid existing id (/id). 
 # Use 'Get all blogs' to identify blog to delete
-DELETE {{baseUrl}}/6
+DELETE {{baseUrl}}/7
 
 ### Delete a blog with valid non-existing id.
 # Triggers the blogFinder guard clause: if (!req.blog) return 404
