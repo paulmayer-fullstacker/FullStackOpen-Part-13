@@ -1,11 +1,11 @@
 # requests.rest
 # REST Client script to test API routes.
-@baseUrl = http://localhost:3001/api/blogs
+@baseUrl = http://localhost:3001/api
 ### Get all blogs
-GET {{baseUrl}}
+GET {{baseUrl}}/blogs
 
 ### Add a new blog (Success case)
-POST {{baseUrl}}
+POST {{baseUrl}}/blogs
 Content-Type: application/json
 
 {
@@ -16,7 +16,7 @@ Content-Type: application/json
 }
 
 ### Test POST error handling: Add a blog with missing required field (Failure/Validation test)
-POST {{baseUrl}}
+POST {{baseUrl}}/blogs
 Content-Type: application/json
 
 {
@@ -24,7 +24,7 @@ Content-Type: application/json
 }
 
 ### Update the likes of a specific blog, by id (/id)
-PUT {{baseUrl}}/4
+PUT {{baseUrl}}/blogs/4
 Content-Type: application/json
 
 {
@@ -32,7 +32,7 @@ Content-Type: application/json
 }
 
 ### Test PUT error handling (Invalid likes data type)
-PUT {{baseUrl}}/4
+PUT {{baseUrl}}/blogs/4
 Content-Type: application/json
 
 {
@@ -41,12 +41,36 @@ Content-Type: application/json
 
 ### Delete a blog by valid existing id (/id). 
 # Use 'Get all blogs' to identify blog to delete
-DELETE {{baseUrl}}/7
+DELETE {{baseUrl}}/blogs/4
 
 ### Delete a blog with valid non-existing id.
 # Triggers the blogFinder guard clause: if (!req.blog) return 404
-DELETE {{baseUrl}}/999999
+DELETE {{baseUrl}}/blogs/999999
 
 ### Delete a blog by malformed id (400 Bad Request test)
 # Triggers the blogFinder catch block. PostgreSQL cannot query an int column with a string.
-DELETE {{baseUrl}}/abc
+DELETE {{baseUrl}}/blogs/abc
+
+### Get all users
+GET {{baseUrl}}/users
+
+### Create a new user (inc. password field that should be ignored)
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "username": "jimcricket",
+  "name": "Jim Cricket",
+  "password": "secret"
+}
+
+### Get a single user by ID (replace 1 with user id from the Db)
+GET {{baseUrl}}/users/1
+
+### Update a user's name by username (replace jimcricket with valid username)
+PUT {{baseUrl}}/users/jimcricket
+Content-Type: application/json
+
+{
+  "name": "Jimmy Cricket"
+}

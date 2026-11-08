@@ -28,9 +28,9 @@ Blog.init({
   }
 }, 
 // Config options passed as the model options object to Sequelize's .init() method.
-//  They tell Sequelize how this model should behave and interact with our PostgreSQL database.
+//  They tell Sequelize how this model should behave and interact with our PostgreSQL Db.
 {
-  sequelize,  // Passes our active database connection instance (sequelize from util/db.js) to the model.
+  sequelize,  // Passes our active Db connection instance (sequelize from util/db.js) to the model.
   underscored: true,  // Tells Sequelize to use snake_case for any auto generated columns or foreign keys. Keeps our database naming conventions consistent.
   timestamps: false,  // As id used as primary key, Sequelize should not auto add timestamp columns (created_at / updated_at) to the table
   modelName: 'blog'  // Sets the internal name of the model in singular form (blog). For internal Sequelize tracking purposes.

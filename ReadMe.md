@@ -196,3 +196,63 @@ Files updated:
 - **`controllers/blogs.js`**: Removed `try/catch` blocks and passed errors via `next(error)`.
 
 ---
+
+## Blog List Backend Exercise-8
+
+The repository has been extended to implement a full user management subsystem for the blog service. Exercise-8 introduces a dedicated `User` model, modular user routing (`controllers/users.js`), custom middleware for lookup by unique username, robust password field handling, and local `404` fallback handling for missing records. I added a unified data seeding script, seeding data for users and blogs, and a `requests.rest` REST Client test file.
+
+### Architectural Overview & Modular Design
+
+The application maintains strict modularity, separating user logic from blog logic while leveraging centralized configuration, error handling, and database connection utilities:
+
+```mermaid
+graph TD
+    Client["VS Code REST Client / Frontend"] --> Express["Express Server (index.js)"]
+
+    subgraph Application Layers
+        Express --> BlogsRouter["Blogs Router (/api/blogs)"]
+        Express --> UsersRouter["Users Router (/api/users)"]
+        
+        BlogsRouter --> BlogMiddleware["blogFinder Middleware"]
+        UsersRouter --> UserMiddleware["userFindByUsername Middleware"]
+        
+        BlogMiddleware --> ModelsHub["Centralized Models Hub (models/index.js)"]
+        UserMiddleware --> ModelsHub
+        
+        ModelsHub --> UserModel["User Model (models/user.js)"]
+        ModelsHub --> BlogModel["Blog Model (models/blog.js)"]
+        
+        UserModel --> DBConn["Database Utility (utils/db.js)"]
+        BlogModel --> DBConn
+        
+        DBConn --> Config["Config Utility (utils/config.js)"]
+    end
+
+    subgraph PostgreSQL Database
+        DBConn --> PG[("PostgreSQL Database (blog_db)")]
+    end
+
+    Seed["Unified Seeder Script (seed.js)"] --> PG
+```
+
+The project structure now includes:
+- `models/user.js`: Defines the Sequelize User schema mapping to the PostgreSQL `users` table (`id`, `username` [unique, non-nullable], `name` [non-nullable], with Sequelize-managed timestamps via `underscored: true`).
+- `controllers/users.js`: Houses route handlers (`GET` all, `POST`, `GET` by ID, `PUT` by username) and the custom `userFindByUsername` middleware.
+- `utils/seedingUserData.js`: Seeding data payload for initial users.
+- `seed.js`: Updated unified automation script that drops, resets, and seeds both users and blogs sequentially.
+
+### Core User API Endpoints & Middleware
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **GET** | `/api/users` | Retrieves all user objects stored in the database. |
+| **POST** | `/api/users` | Creates a new user entry (validates payload, safely ignores unexpected fields like `password`, returns `201 Created` or `400 Bad Request`). |
+| **GET** | `/api/users/:id` | Retrieves a single user by primary key ID (manages missing records locally, returns user or `404 Not Found`). |
+| **PUT** | `/api/users/:username` | Uses `userFindByUsername` middleware to look up the user by unique username, updates their name, and saves the instance (`200 OK` or `404 Not Found`). |
+
+### Key Implementation Details
+
+- **Custom Username Middleware (`userFindByUsername`)**: Encapsulates `User.findOne({ where: { username: req.params.username } })` for `PUT` requests, attaching the found user instance to `req.user` or cleanly responding with a `404 Not Found` if no match is found.
+- **Password Payload Handling**: Satisfies criteria by accepting requests containing a `password` field during user creation without failing, safely ignoring fields not defined in the Sequelize model schema.
+- **Local `404` Fallback**: Recognizes that `user == null` lookups in Sequelize represent empty result sets rather than database exceptions, handling them locally as standard `404` errors rather than triggering the centralized error-handling pipeline.
+- **Unified Seeding**: Combines user and blog creation into a single sequential script (`seed.js`) to ensure clean state resetting across all database entities.

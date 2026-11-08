@@ -18,17 +18,17 @@ const blogFinder = async (req, res, next) => {
   next() 
 }
 
-// API Route: GET all blog objects from the database using the Sequelize Blog model.
+// API Route: GET all blog objects from the Db using the Sequelize Blog model.
 router.get('/', async (req, res) => {
   // Blog.findAll() translates to SQL: SELECT * FROM blogs.
   const blogs = await Blog.findAll()
   res.json(blogs)
 })
 
-// API Route: POST a new blog object to the database.
+// API Route: POST a new blog object to the Db.
 router.post('/', async (req, res, next) => {
   try {
-    // Insert new row in the table using the JSON data sent by the client (req.body). 'await' the database operation to finish.
+    // Insert new row in the table using the JSON data sent by the client (req.body). 'await' the Db operation to finish.
     const blog = await Blog.create(req.body)
     // If success: send an HTTP 201 (Created) code back to client, with newly created blog object (as JSON), inc. its new Db id.
     res.status(201).json(blog)
@@ -44,11 +44,11 @@ router.put('/:id', blogFinder, async (req, res, next) => {
   try {
     // Update the likes property on the blog object found by blogFinder.
     req.blog.likes = req.body.likes
-    // Save the updated blog instance back to the PostgreSQL database.
+    // Save the updated blog instance back to the PostgreSQL Db.
     await req.blog.save()
     // Send the updated blog object back to the client as JSON.
     res.json(req.blog)
-    // Handle any validation or database errors (invalid entry for new likes, or PUT conection failure ).
+    // Handle any validation or Db errors (invalid entry for new likes, or PUT conection failure ).
   } catch (error) {
     // Passes the error to our centralised error handler in middleware.js.
     next(error) 

@@ -1,9 +1,10 @@
 // seed.js:
-// Script to reset and seed the database with initial blog data.
+// Script to reset and seed the Db with initial blog and user data.
 
 require('dotenv').config()
 const { sequelize } = require('./utils/db')
-const { Blog } = require('./models') // Import Blog from our centralised models entry point.
+const { User, Blog } = require('./models') // Import User and Blog from our centralised models entry point.
+const seedUsers = require('./utils/seedingUserData')  // Import our seeding users data object (array).
 const seedBlogs = require('./utils/seedingBlogData') // Import our seeding blogs data object (array).
 
 const seedDatabase = async () => {
@@ -12,16 +13,23 @@ const seedDatabase = async () => {
     await sequelize.authenticate()
     console.log('Connected to Db, ready for seeding.')
 
-    // Drop the table if it exists and recreate it (force: true drops existing tables)
-    await Blog.sync({ force: true })
-    console.log('Database tables dropped and recreated.')
+    // Drop all tables and recreate them cleanly based on model definitions (force: true drops existing tables).
+    await sequelize.sync({ force: true })
+    console.log('All database tables dropped and recreated.')
 
-    // Loop through the imported array and create a row for each blog
+    // Seed Users first. Loop through the imported user array creating a row for each user.
+    for (let user of seedUsers) {
+      await User.create(user)
+    }
+    console.log(`${seedUsers.length} users inserted.`)
+
+     // Loop through the imported blogs array and create a row for each blog
     for (let blog of seedBlogs) {
       await Blog.create(blog)
     }
+    console.log(`${seedBlogs.length} blogs inserted.`)
 
-    console.log(`Seeding success! ${seedBlogs.length} blogs inserted.`)
+    console.log('Database seeding completed successfully!')
     process.exit(0)
   } catch (error) {
     console.error(`Error seeding the database:`, error)
