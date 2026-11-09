@@ -1,11 +1,11 @@
 // utils/seedingUserData.js
 const seedUsers = [
   {
-    username: 'barrybee',
+    username: 'barrybee@yahoo.com',
     name: 'Barry Bee'
   },
   {
-    username: 'deanbug',
+    username: 'deanbug@yahoo.com',
     name: 'Dean Bug'
   }
 ]

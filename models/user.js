@@ -15,7 +15,14 @@ User.init({
   username: {
     type: DataTypes.STRING,
     unique: true,
-    allowNull: false
+    allowNull: false,
+    validate: { // Validate object.
+      // Sequelize built-in isEmail validator checks if the string passed to username matches standard email formatting.
+      isEmail: {
+        // If it fails: Sequelize prevents it from hitting the database and throws a SequelizeValidationError containing your custom error message.
+        msg: "username must be a valid email address"
+      }
+    }
   },
   name: {
     type: DataTypes.STRING,

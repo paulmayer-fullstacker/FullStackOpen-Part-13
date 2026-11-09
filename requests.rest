@@ -59,7 +59,7 @@ POST {{baseUrl}}/users
 Content-Type: application/json
 
 {
-  "username": "jimcricket",
+  "username": "jimcricket@gmail.com",
   "name": "Jim Cricket",
   "password": "secret"
 }
@@ -68,9 +68,19 @@ Content-Type: application/json
 GET {{baseUrl}}/users/1
 
 ### Update a user's name by username (replace jimcricket with valid username)
-PUT {{baseUrl}}/users/jimcricket
+PUT {{baseUrl}}/users/jimcricket@gmail.com
 Content-Type: application/json
 
 {
   "name": "Jimmy Cricket"
+}
+
+### Test POST user email validation error
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "username": "not-an-email",
+  "name": "Test User",
+  "password": "secret"
 }

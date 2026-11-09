@@ -25,7 +25,7 @@ graph TD
     Seed["External Seeder Script (seed.js)"] --> PG
 ```
 
-The project is organized into structured directories and files:
+The project is organised into structured directories and files:
 
 - `requests.rest`: A modular script configured with file variables for testing API endpoints directly inside VS Code.
 - `index.js`: The main entry point initialising the Express application, middleware (`express.json()`), route handlers, and asynchronous startup sequence.
@@ -81,7 +81,7 @@ The project is organized into structured directories and files:
 
 ## Blog List Backend Exercise-5
 
-This repository contains a Node.js, Express, and Sequelize backend for a blog service application, refactored into a professional, modular **MVC (Model-View-Controller)** architecture. The service includes centralized configuration, database connection management, automated data seeding, custom middleware, robust error handling, and a local testing workflow using VS Code's REST Client.
+This repository contains a Node.js, Express, and Sequelize backend for a blog service application, refactored into a professional, modular **MVC (Model-View-Controller)** architecture. The service includes centralised configuration, database connection management, automated data seeding, custom middleware, robust error handling, and a local testing workflow using VS Code's REST Client.
 
 ### Architectural Overview & Modular Design
 
@@ -94,7 +94,7 @@ graph TD
     subgraph Application Layers
         Express --> Router["Blogs Router (controllers/blogs.js)"]
         Router --> Middleware["blogFinder Middleware"]
-        Middleware --> Models["Centralized Models Hub (models/index.js)"]
+        Middleware --> Models"Centralised Models Hub (models/index.js)"]
         Models --> BlogModel["Blog Model (models/blog.js)"]
         BlogModel --> DBConn["Database Utility (utils/db.js)"]
         DBConn --> Config["Config Utility (utils/config.js)"]
@@ -107,14 +107,14 @@ graph TD
     Seed["External Seeder Script (seed.js)"] --> PG
 ```
 
-The project is organized into structured directories and files:
+The project is organised into structured directories and files:
 
 - `requests.rest`: A modular script configured for testing API endpoints (including success, validation failures, 404s, and malformed IDs) directly inside VS Code.
-- `index.js`: The main application entry point initializing Express, mounting middleware (`express.json()`), connecting routers, and managing the asynchronous startup sequence.
-- `utils/config.js`: Centralizes environment variables (such as `PORT` and `DATABASE_URL`).
+- `index.js`: The main application entry point initialising Express, mounting middleware (`express.json()`), connecting routers, and managing the asynchronous startup sequence.
+- `utils/config.js`: Centralises environment variables (such as `PORT` and `DATABASE_URL`).
 - `utils/db.js`: Encapsulates the Sequelize instance and database connection logic with explicit authentication.
 - `models/blog.js`: Defines the Sequelize Blog schema mapping directly to the PostgreSQL table (`id`, `author`, `url`, `title`, `likes`).
-- `models/index.js`: Centralized export portal for all database models.
+- `models/index.js`: Centralised export portal for all database models.
 - `controllers/blogs.js`: Houses route handlers (`GET`, `POST`, `DELETE`) and the custom `blogFinder` middleware for encapsulating resource lookups and error handling.
 - `seed.js`: An independent automation script used to reset, drop, and populate the database with initial records.
 - `utils/seedingBlogData.js`: Seeding data payload used to initially populate the blogs table.
@@ -203,7 +203,7 @@ The repository has been extended to implement a full user management subsystem f
 
 ### Architectural Overview & Modular Design
 
-The application maintains strict modularity, separating user logic from blog logic while leveraging centralized configuration, error handling, and database connection utilities:
+The application maintains strict modularity, separating user logic from blog logic while leveraging centralised configuration, error handling, and database connection utilities:
 
 ```mermaid
 graph TD
@@ -216,7 +216,7 @@ graph TD
         BlogsRouter --> BlogMiddleware["blogFinder Middleware"]
         UsersRouter --> UserMiddleware["userFindByUsername Middleware"]
         
-        BlogMiddleware --> ModelsHub["Centralized Models Hub (models/index.js)"]
+        BlogMiddleware --> ModelsHub["Centralised Models Hub (models/index.js)"]
         UserMiddleware --> ModelsHub
         
         ModelsHub --> UserModel["User Model (models/user.js)"]
@@ -254,5 +254,26 @@ The project structure now includes:
 
 - **Custom Username Middleware (`userFindByUsername`)**: Encapsulates `User.findOne({ where: { username: req.params.username } })` for `PUT` requests, attaching the found user instance to `req.user` or cleanly responding with a `404 Not Found` if no match is found.
 - **Password Payload Handling**: Satisfies criteria by accepting requests containing a `password` field during user creation without failing, safely ignoring fields not defined in the Sequelize model schema.
-- **Local `404` Fallback**: Recognizes that `user == null` lookups in Sequelize represent empty result sets rather than database exceptions, handling them locally as standard `404` errors rather than triggering the centralized error-handling pipeline.
+- **Local `404` Fallback**: Recognises that `user == null` lookups in Sequelize represent empty result sets rather than database exceptions, handling them locally as standard `404` errors rather than triggering the centralised error-handling pipeline.
 - **Unified Seeding**: Combines user and blog creation into a single sequential script (`seed.js`) to ensure clean state resetting across all database entities.
+
+
+---
+
+## Blog List Backend Exercise-9
+
+In Exercise-9, we enhanced data validation and API error reporting by implementing built-in email validation on the user model and upgrading our centralised error-handling middleware.
+
+### Key Implementations & Enhancements
+
+* **Model-Level Email Validation (`models/user.js`)**:
+  * Configured the `username` field to enforce that values must be valid email addresses using Sequelize's built-in `isEmail` validator.
+  * Supplied a custom error message (`"username must be a valid email address"`) to ensure descriptive feedback when validation fails.
+
+* **Upgraded Centralised Error Handling (`utils/middleware.js`)**:
+  * Updated the global `errorHandler` middleware to explicitly check for `SequelizeValidationError` instances.
+  * Extracted individual validation error messages into an array using `.map()` and returned them in the required structured JSON format (`{ error: ["..."] }`).
+
+### Files Updated
+- **`models/user.js`**: Added the `validate` property with the `isEmail` rule and custom error message to the `username` attribute.
+- **`utils/middleware.js`**: Added conditional logic to handle `SequelizeValidationError`, mapping errors into a clean array format with an HTTP `400 Bad Request` status code.
