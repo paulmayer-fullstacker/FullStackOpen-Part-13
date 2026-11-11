@@ -1,0 +1,120 @@
+# requestsAuth.rest:
+# requests.rest
+# REST Client script to test API routes.
+@baseUrl = http://localhost:3001/api
+
+# Automatically capture the token from the login response for subsequent requests
+@authToken = {{loginRequest.response.body.token}}
+
+
+### USER MANAGEMENT & AUTHENTICATION
+
+## First, seed the Db
+
+### Get all users
+GET {{baseUrl}}/users
+
+
+### Create a new user (with password hashing)
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+"username": "authenticateduser@gmail.com",
+"name": "Auth User",
+"password": "secret"
+}
+
+### Login as the user to obtain a JWT token
+### Tag the POST request so the REST Client extension knows where to find the JWT. 
+# @name loginRequest
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "username": "authenticateduser@gmail.com",
+  "password": "secret"
+}
+
+
+### Test POST user email validation error (invalid email format)
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+"username": "not-an-email",
+"name": "Test User",
+"password": "secret"
+}
+
+### Get all users
+GET {{baseUrl}}/users
+
+### Get a single user by id
+GET {{baseUrl}}/users/1
+
+### Update a user's name by username
+PUT {{baseUrl}}/users/authenticateduser@gmail.com
+Content-Type: application/json
+
+{
+"name": "Authenticated User (Updated)"
+}
+
+
+### PROTECTED BLOG ROUTES (Require JWT)
+
+### Add a new blog WITH an authentication token (Success case)
+POST {{baseUrl}}/blogs
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+"author": "Authenticated Author",
+"url": "https://authenticatedauthor.org/",
+"title": "Secure Blog Post with Token",
+"likes": 10
+}
+
+### Test POST blog failure: Try creating a blog without a token (401 Unauthorized)
+POST {{baseUrl}}/blogs
+Content-Type: application/json
+
+{
+"author": "Unauthorized Author",
+"url": "https://unauthoriseauthor.org/",
+"title": "Should Fail",
+"likes": 0
+}
+
+### Test DELETE success: Delete a blog as its owner (204 No Content)
+DELETE {{baseUrl}}/blogs/3
+Authorization: Bearer {{authToken}}
+
+
+### PUBLIC BLOG ROUTES & ERROR HANDLING
+
+### Get all blogs
+GET {{baseUrl}}/blogs
+
+### Update the likes of a specific blog, by id
+PUT {{baseUrl}}/blogs/3
+Content-Type: application/json
+
+{
+"likes": 40
+}
+
+### Test PUT error handling (Invalid likes data type)
+PUT {{baseUrl}}/blogs/3
+Content-Type: application/json
+
+{
+"likes": "not-a-number"
+}
+
+### Delete a blog with valid non-existing id (404 Not Found)
+DELETE {{baseUrl}}/blogs/999999
+
+### Delete a blog by malformed id (400 Bad Request test)
+DELETE {{baseUrl}}/blogs/abc

@@ -2,11 +2,13 @@
 const seedUsers = [
   {
     username: 'barrybee@yahoo.com',
-    name: 'Barry Bee'
+    name: 'Barry Bee',
+    password: 'secret'
   },
   {
     username: 'deanbug@yahoo.com',
-    name: 'Dean Bug'
+    name: 'Dean Bug',
+    password: 'secret'
   }
 ]
 

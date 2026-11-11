@@ -78,7 +78,6 @@ Content-Type: application/json
 ### Test POST user email validation error
 POST {{baseUrl}}/users
 Content-Type: application/json
-
 {
   "username": "not-an-email",
   "name": "Test User",

@@ -10,4 +10,6 @@ module.exports = {
   DATABASE_URL: process.env.DATABASE_URL,
   // Custom PORT from env var or fallback (3001).
   PORT: process.env.PORT || 3001,
+  // Export our secret key for signing JWTs.
+  SECRET: process.env.SECRET,
 }

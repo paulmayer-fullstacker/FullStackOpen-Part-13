@@ -94,7 +94,7 @@ graph TD
     subgraph Application Layers
         Express --> Router["Blogs Router (controllers/blogs.js)"]
         Router --> Middleware["blogFinder Middleware"]
-        Middleware --> Models"Centralised Models Hub (models/index.js)"]
+        Middleware --> Models["Centralised Models Hub (models/index.js)"]
         Models --> BlogModel["Blog Model (models/blog.js)"]
         BlogModel --> DBConn["Database Utility (utils/db.js)"]
         DBConn --> Config["Config Utility (utils/config.js)"]
@@ -277,3 +277,62 @@ In Exercise-9, we enhanced data validation and API error reporting by implementi
 ### Files Updated
 - **`models/user.js`**: Added the `validate` property with the `isEmail` rule and custom error message to the `username` attribute.
 - **`utils/middleware.js`**: Added conditional logic to handle `SequelizeValidationError`, mapping errors into a clean array format with an HTTP `400 Bad Request` status code.
+
+
+## Blog List Backend Exercise-10
+
+The repository has been extended to implement user authentication via JSON Web Tokens (JWT), password verification using `bcrypt`, a dedicated login endpoint (`POST /api/login`), centralised token extraction middleware (`tokenExtractor`), and token-authenticated blog creation (`POST /api/blogs`) linked directly to the user.
+
+### Architectural Overview & Modular Design
+
+The application maintains modularity, separating authentication logic from blog and user management while leveraging centralised configuration, token extraction, model synchronisation, and error handling:
+
+```mermaid
+graph TD
+    Client["VS Code REST Client / Frontend"] --> Express["Express Server (index.js)"]
+
+    subgraph Application Layers
+        Express --> LoginRouter["Login Router (/api/login)"]
+        Express --> BlogsRouter["Blogs Router (/api/blogs)"]
+        Express --> UsersRouter["Users Router (/api/users)"]
+        
+        LoginRouter --> UserModel["User Model (models/user.js)"]
+        BlogsRouter --> AuthMiddleware["tokenExtractor Middleware"]
+        BlogsRouter --> BlogMiddleware["blogFinder Middleware"]
+        
+        AuthMiddleware --> JWT["JSON Web Token Verification"]
+        BlogMiddleware --> ModelsHub["Centralised Models Hub (models/index.js)"]
+        
+        ModelsHub --> DBConn["Database Utility (utils/db.js)"]
+        DBConn --> Config["Config Utility (utils/config.js)"]
+    end
+
+    subgraph PostgreSQL Database
+        DBConn --> PG[("PostgreSQL Database (blog_db)")]
+    end
+```
+
+The project structure has been expanded with:
+- `utils/authMiddleware.js`: Houses the `tokenExtractor` middleware, which parses incoming `Authorization` headers, strips the `Bearer ` prefix, verifies the cryptographic signature using `jsonwebtoken`, attaches the decoded payload to `req.decodedToken`, and handles missing or invalid tokens with HTTP `401 Unauthorised` responses.
+- `controllers/login.js`: Handles user authentication by looking up the user, verifying their password hash using `bcrypt`, and issuing a signed JWT containing their username and database ID.
+- `controllers/blogs.js`: Updated to protect the `POST` route with `tokenExtractor`, automatically fetching the user via `User.findByPk` and linking newly created blogs to the authenticated user via foreign keys (`userId`).
+- `models/index.js` & `index.js`: Refactored to utilize a modular `syncModels` asynchronous function incorporating Sequelize's `{ alter: true }` lifecycle option during server startup.
+
+### Core Authentication & Blog Creation Endpoints
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **POST** | `/api/login` | Authenticates user credentials (`username` and `password`), validates password hash, and returns a signed JWT token along with user details (`200 OK` or `401 Unauthorized`). |
+| **GET** | `/api/blogs` | Public endpoint retrieving all blog objects stored in the database. |
+| **POST** | `/api/blogs` | Protected by `tokenExtractor`. Creates a new blog entry linked to the authenticated user (`201 Created`, `401 Unauthorized`, or `400 Bad Request`). |
+
+### Key Implementation Details
+
+- **Token Extraction (`tokenExtractor`)**: Safely parses incoming `Authorization: Bearer <token>` headers, validating structural integrity while cleanly logging technical errors to the terminal and returning predictable `401` statuses to clients.
+- **Secure Password Comparison**: Uses `bcrypt` to securely compare plaintext passwords against database-stored password hashes during login.
+- **User Association**: Links each newly created blog to its creator in PostgreSQL via the `userId` foreign key derived from the verified JWT payload.
+- **Model Synchronisation (`syncModels`)**: Utilises Sequelize's `sync({ alter: true })` lifecycle hook wrapped in a startup function during server boot to safely align database schemas with updated model definitions.
+
+### Test
+
+Test using the new requestsAuth.rest file which now accommodates authentication through the JWT bearer token.

@@ -2,6 +2,7 @@
 // Route handlers for db_user API endpoints.
 
 const router = require('express').Router()
+const bcrypt = require('bcrypt')
 // Import the User model from our centralised models directory.
 const { User } = require('../models')
 
@@ -23,11 +24,19 @@ router.get('/', async (req, res) => {
   res.json(users)
 })
 
-// API Route: POST a new user object to the Db.
+// API Route: POST a new user object to the Db. Hashes plaintext password with bcrypt.
 router.post('/', async (req, res, next) => {
   try {
+    const { username, name, password } = req.body
+    // Generate a secure bcrypt password hash (salt rounds = 10)
+    const saltRounds = 10
+    const passwordHash = await bcrypt.hash(password, saltRounds)
     // Insert new row in the table using the JSON data sent by the client (req.body). 'await' the Db operation to finish.
-    const user = await User.create(req.body)
+    const user = await User.create({
+      username,
+      name,
+      passwordHash
+    })
     // If success: send an HTTP 201 (Created) code back to client, with newly created user object (as JSON), inc. its new Db id.
     res.status(201).json(user)
     // else: catch error. Problem, e.g., missing a required field like 'user name'.

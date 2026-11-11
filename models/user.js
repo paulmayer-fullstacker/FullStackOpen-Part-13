@@ -28,6 +28,11 @@ User.init({
     type: DataTypes.STRING,
     allowNull: false
   },
+  // passwordHash field stores the encrypted bcrypt password string in the database.
+  passwordHash: {
+    type: DataTypes.STRING,
+    allowNull: false
+  }
 },
 // Config options passed as the model options object to Sequelize's .init() method.
 // They tell Sequelize how this model should behave and interact with our PostgreSQL Db.
