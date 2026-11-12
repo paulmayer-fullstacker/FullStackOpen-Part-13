@@ -336,3 +336,23 @@ The project structure has been expanded with:
 ### Test
 
 Test using the new requestsAuth.rest file which now accommodates authentication through the JWT bearer token.
+
+
+## Blog List Backend Exercise-11
+
+The repository has been extended to implement ownership-based authorisation for blog post deletion, ensuring that only the user who originally created a blog (the owner) can remove it from the system.
+
+### Key Implementations & Enhancements
+
+- **Ownership-Based Authorization (`controllers/blogs.js`)**:
+  * Updated the `DELETE /api/blogs/:id` route to chain both `tokenExtractor` and `blogFinder` middleware.
+  * Implemented a strict security check comparing the blog's `userId` foreign key (`req.blog.userId`) against the authenticated user's id extracted from the verified JWT token (`req.decodedToken.id`).
+  * Enforced an HTTP **`403 Forbidden`** response with a descriptive error message (`"Unauthorized: Only the owner of a blog can delete it"`) if an unauthorized user attempts to delete a resource they do not own.
+
+- **Automated Testing (`requestsAuth.rest`)**:
+  * Expanded the VS Code REST Client test suite to include multi-user workflows.
+  * Added test cases to verify that attempting to delete another user's blog correctly returns a `403 Forbidden` error, while successful ownership deletion return a `204 No Content` status.
+
+### Files Updated
+- **`controllers/blogs.js`**: Added the ownership guard clause checking `req.blog.userId === req.decodedToken.id` to the `DELETE` route handler.
+- **`requestsAuth.rest`**: Added a second user creation, login token capture (`@otherAuthToken`), and failure testing for the `403 Forbidden` restriction.

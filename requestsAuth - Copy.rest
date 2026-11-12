@@ -6,6 +6,9 @@
 # Automatically capture the token from the login response for subsequent requests
 @authToken = {{loginRequest.response.body.token}}
 
+# Capture the second user's token for use in ownership delete testing.
+@otherAuthToken = {{loginSecondUser.response.body.token}}
+
 
 ### USER MANAGEMENT & AUTHENTICATION
 
@@ -87,8 +90,38 @@ Content-Type: application/json
 "likes": 0
 }
 
+
+### OWNERSHIP TEST: 403 FORBIDDEN
+
+### Create a SECOND user (The "Other" user)
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "username": "otheruser@gmail.com",
+  "name": "Other User",
+  "password": "secret"
+}
+
+### Login as the SECOND user to obtain a separate token
+# @name loginSecondUser
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "username": "otheruser@gmail.com",
+  "password": "secret"
+}
+
+### Get all blogs
+GET {{baseUrl}}/blogs
+
+### Test DELETE failure: Try to delete a blog owned by someone else (403 Forbidden)
+DELETE {{baseUrl}}/blogs/4
+Authorization: Bearer {{otherAuthToken}}
+
 ### Test DELETE success: Delete a blog as its owner (204 No Content)
-DELETE {{baseUrl}}/blogs/3
+DELETE {{baseUrl}}/blogs/4
 Authorization: Bearer {{authToken}}
 
 
@@ -113,8 +146,8 @@ Content-Type: application/json
 "likes": "not-a-number"
 }
 
-### Delete a blog with valid non-existing id (404 Not Found)
+### Delete a blog with valid non-existing id (401 Unaurthorised) Token Missing
 DELETE {{baseUrl}}/blogs/999999
 
-### Delete a blog by malformed id (400 Bad Request test)
+### Delete a blog by malformed id (401 Unaurthorised) Token Missing
 DELETE {{baseUrl}}/blogs/abc

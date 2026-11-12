@@ -64,34 +64,34 @@ router.put('/:id', blogFinder, async (req, res, next) => {
   }
 })
 
-// // API Route: DELETE a blog by id, using tokenExtractor and blogFinder middleware.
-// router.delete('/:id', tokenExtractor, blogFinder, async (req, res, next) => {
-//   try {
-//     // Guard clause:
-//     // req.blog.userId is the foreign key stored in the database, req.decodedToken.id is the id extracted from the verified JWT.
-//     if (req.blog.userId !== req.decodedToken.id) {
-//       // if current user is not the owner of the blog return 403 (Forbidden) and error msg.
-//       return res.status(403).json({ 
-//         error: 'Unauthorized: Only the owner of a blog can delete it' 
-//       })
-//     }
-//     // else if ownership check passes, destroy the blog instance.
-//     await req.blog.destroy()
-//     // and send an HTTP 204 (No Content) status on successful deletion.
-//     res.status(204).end()
+// API Route: DELETE a blog by id, using tokenExtractor and blogFinder middleware.
+router.delete('/:id', tokenExtractor, blogFinder, async (req, res, next) => {
+  try {
+    // Guard clause:
+    // req.blog.userId is the foreign key stored in the Db, req.decodedToken.id is the id extracted from the verified JWT.
+    if (req.blog.userId !== req.decodedToken.id) {
+      // if current user is not the owner of the blog return 403 (Forbidden) and error msg.
+      return res.status(403).json({ 
+        error: 'Unauthorized: Only the owner of a blog can delete it' 
+      })
+    }
+    // else if ownership validated, destroy the blog instance.
+    await req.blog.destroy()
+    // and send an HTTP 204 (No Content) status on successful deletion.
+    res.status(204).end()
 
-//   } catch (error) {
-//     // Pass any unexpected errors to the centralised error handler.
-//     next(error)
-//   }
-// })
-
-// API Route: DELETE a blog by id, using the blogFinder middleware.
-router.delete('/:id', blogFinder, async (req, res) => {
-  // Since blogFinder already verified and attached req.blog, destroy directly without validation.
-  await req.blog.destroy()
-  // and send 204 (No Content) status on successful deletion.
-  res.status(204).end()
+  } catch (error) {
+    // Pass any unexpected errors to the centralised error handler.
+    next(error)
+  }
 })
+
+// // API Route: DELETE a blog by id, using the blogFinder middleware.
+// router.delete('/:id', blogFinder, async (req, res) => {
+//   // Since blogFinder already verified and attached req.blog, destroy directly without validation.
+//   await req.blog.destroy()
+//   // and send 204 (No Content) status on successful deletion.
+//   res.status(204).end()
+// })
 
 module.exports = router
