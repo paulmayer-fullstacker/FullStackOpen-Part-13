@@ -23,7 +23,7 @@ const blogFinder = async (req, res, next) => {
 }
 
 // API Route: GET all blog objects from the Db using the Sequelize Blog model.
-// Now supports optional keyword filtering via query parameter (?search=...)
+// Now supports optional keyword filtering via query parameter (?search=...). Ordered by 'likes' descending.
 router.get('/', async (req, res) => {
   // Initialise an empty where clause object.
   let where = {}
@@ -49,7 +49,9 @@ router.get('/', async (req, res) => {
       model: User,
       // However, only expose the name and username fields. So, exclude the user's password hash.
       attributes: ['name', 'username'] 
-    }
+    },
+    // Order results by the 'likes' column in descending (DESC) order. 
+    order: [['likes', 'DESC']]   // Outer array holds sorting rules; inner array specifies [column, direction] rule.
   })
   res.json(blogs)
 })

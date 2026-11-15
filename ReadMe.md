@@ -417,3 +417,22 @@ The repository has been extended to enhance the keyword search capability on the
 ### Files Updated
 
 * **`controllers/blogs.js`**: Updated the `req.query.search` conditional block in the `GET /api/blogs` route handler to evaluate an `Op.or` array across both `title` and `author`.
+
+
+## Blog List Backend Exercise-15
+
+The repository has been extended to implement result ordering on the `GET /api/blogs` endpoint, ensuring that retrieved blog records are automatically sorted by popularity (`likes`) in descending order.
+
+### Key Implementations & Enhancements
+
+* **Descending Result Ordering (`controllers/blogs.js`)**:
+
+  * Updated the `Blog.findAll()` query options inside the `GET /api/blogs` route handler to include Sequelize's **`order`** property (`order: [['likes', 'DESC']]`).
+
+  * Configured the nested sorting array so that PostgreSQL executes an `ORDER BY "blog"."likes" DESC` clause, returning the highest-liked blogs first.
+
+  * Maintained seamless compatibility with existing query filters (`where`) and relational eager loading (`include`), ensuring both full blog lists and filtered keyword searches (`?search=...`) are consistently returned in descending order of likes.
+
+### Files Updated
+
+* **`controllers/blogs.js`**: Added the `order: [['likes', 'DESC']]` configuration option to `Blog.findAll()` within the `GET /api/blogs` route handler.
