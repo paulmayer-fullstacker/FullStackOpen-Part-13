@@ -116,6 +116,15 @@ Content-Type: application/json
 ### Get all blogs
 GET {{baseUrl}}/blogs
 
+### Get blogs filtered by search keyword (lowercase)
+# Should return blogs where the title contains "react"
+GET {{baseUrl}}/blogs?search=and
+
+
+### Test case-insensitivity (uppercase / mixed case)
+# Should still successfully return matching blogs even if the query is uppercase
+GET {{baseUrl}}/blogs?search=AnD
+
 ### Test DELETE failure: Try to delete a blog owned by someone else (403 Forbidden)
 DELETE {{baseUrl}}/blogs/4
 Authorization: Bearer {{otherAuthToken}}

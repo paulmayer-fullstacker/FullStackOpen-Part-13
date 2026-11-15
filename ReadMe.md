@@ -377,3 +377,23 @@ The repository has been extended to implement relational data fetching (eager lo
 - **`controllers/blogs.js`**: Added the `include` option to `Blog.findAll()` to fetch joined user details with filtered attributes.
 - **`controllers/users.js`**: Imported the `Blog` model and added the `include` option to user retrieval routes, ensuring password hashes are excluded from public API responses.
 - **`models/index.js`**: The `include` clauses in users and blogs controllers work, because `models/index.js` already contains two key relationship definitions: `User.hasMany(Blog)` and `Blog.belongsTo(User)`.
+
+
+## Blog List Backend Exercise-13
+
+The repository has been extended to implement optional keyword filtering for the route returning all blogs (`GET /api/blogs`), allowing clients to filter blog records dynamically by title using query parameters.
+
+### Key Implementations & Enhancements
+
+- **Case-Insensitive Keyword Filtering (`controllers/blogs.js`)**:
+  * Imported the Sequelize operators module (`const { Op } = require('sequelize')`).
+  * Implemented optional keyword searching via the `search` query parameter (e.g., `GET /api/blogs?search=react`).
+  * Utilise Sequelize's **`Op.iLike`** operator paired with wildcard percent signs (`%`) to ensure the search is completely case-insensitive and matches substrings anywhere within the blog's `title` field.
+
+- **Query Optimization & Dynamic `where` Clause Construction**:
+  * Adopted the advanced course pattern by initialising an empty `where` conditions object (`const where = {}`).
+  * Conditionally populated `where.title` only when `req.query.search` is provided by the client.
+  * Passed the dynamic `where` object into `Blog.findAll({ where })`, ensuring that standard requests without a search parameter do not generate unnecessary SQL `WHERE` clauses, preserving optimal database performance.
+
+### Files Updated
+- **`controllers/blogs.js`**: Added the `Op` import, initialised the dynamic `where` object, and configured `Op.iLike` substring matching for the `GET /api/blogs` route handler.

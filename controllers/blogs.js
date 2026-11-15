@@ -6,6 +6,8 @@ const router = require('express').Router()
 const { Blog, User } = require('../models')
 // Import our custom token extractor middleware for authentication.
 const { tokenExtractor } = require('../utils/authMiddleware')
+// Import Op (Operators) from sequelize for advanced querying (i.e., /api/blogs?search=react).
+const { Op } = require('sequelize')
 
 // Custom middleware to find a blog by its primary key (id) and reduce code repetition.
 const blogFinder = async (req, res, next) => {
@@ -21,9 +23,24 @@ const blogFinder = async (req, res, next) => {
 }
 
 // API Route: GET all blog objects from the Db using the Sequelize Blog model.
+// Now supports optional keyword filtering via query parameter (?search=...)
 router.get('/', async (req, res) => {
-  // Blog.findAll() translates to SQL: SELECT * FROM blogs.
+  // Initialise an empty where clause object.
+  let where = {}
+
+  // if: a 'search' query parameter was provided in the URL (e.g., /api/blogs?search=react)
+  if (req.query.search) {
+    // Update the Sequelize 'where' object using Op.iLike (instead of Op.substring), for case-insensitive matching.
+    where.title = {
+      [Op.iLike]: `%${req.query.search}%` // % wildcards ensure matching anywhere in the title.
+    }
+  }
+  // else: (no search query was passed), 'where' is {} and no WHERE clause is generated.
+
+  // Blog.findAll() translates to SQL: SELECT * FROM blogs [WHERE ...].
   const blogs = await Blog.findAll({
+    // Pass the in the conditional 'where' object. 
+    where,
     // To make each blog show the user who added it, add the include option,
     include: {
       // telling Sequelize to fetch the joined User model. Works because: Blog.belongsTo(User).
