@@ -1,0 +1,79 @@
+trace the complete journey of how data and execution flow through your backend application.
+
+Step 1: Creating a New User (POST /api/users)
+The Trigger (requests.rest): You send a POST request to http://localhost:3001/api/users with a JSON body containing username (email), name, and password.
+
+The Entry Point (index.js): Express receives the request. The main application file routes any path starting with /api/users over to your users router (controllers/users.js).
+
+The Controller (controllers/users.js): The POST route handler executes. It passes the request body into the Sequelize User model.
+
+Validation & Database (models/user.js & PostgreSQL):
+
+Sequelize runs model-level validations (like checking if the username is a valid email via isEmail).
+
+If valid, a new row is inserted into the users table. If invalid, Sequelize throws a validation error which flows down to your custom global errorHandler middleware in utils/middleware.js, returning a 400 Bad Request.
+
+The Response: On success, Express sends back a 201 Created status along with the newly created user object (excluding the password hash).
+
+Step 2: Logging In & Getting a JWT (POST /api/login)
+The Trigger (requests.rest): You send a POST request to http://localhost:3001/api/login with your credentials (username and password).
+
+The Controller (controllers/login.js):
+
+The login router queries the database using User.findOne({ where: { username } }) to find the user.
+
+If the user doesn't exist, it immediately responds with a 401 Unauthorized ("Invalid username or password").
+
+Password Verification (bcrypt):
+
+It uses bcrypt.compare() to check if the plaintext password sent in the request matches the hashed password stored in the database.
+
+Token Generation (jsonwebtoken):
+
+If the password matches, a payload containing the user's username and database id is signed using your secret key (jwt.sign(userForToken, SECRET)).
+
+The Response: The server returns a 200 OK containing the signed JWT string (token), which your REST Client automatically captures into your @authToken variable.
+
+Step 3: Creating a Blog Post (POST /api/blogs)
+The Trigger (requests.rest): You send a POST request to /api/blogs with blog details in the body and your captured token in the header: Authorization: Bearer {{authToken}}.
+
+The Auth Middleware (utils/authMiddleware.js):
+
+Before reaching the route handler, the request hits the tokenExtractor middleware.
+
+It strips the Bearer  prefix from the header, uses jwt.verify() to check the cryptographic signature, and attaches the decoded user data (req.decodedToken) to the request object. If the token is missing or invalid, it halts execution and returns a 401 Unauthorized.
+
+The Controller (controllers/blogs.js):
+
+The POST route receives the authenticated request.
+
+It uses User.findByPk(req.decodedToken.id) to fetch the full user record from the database.
+
+It calls Blog.create(...), spreading the request body and explicitly mapping userId: user.id to establish the foreign key relationship in PostgreSQL.
+
+The Response: Returns a 201 Created status with the newly saved blog object.
+
+Step 4: Deleting a Blog Post (DELETE /api/blogs/:id)
+The Trigger (requests.rest): You send a DELETE request to /api/blogs/1 with your Authorization: Bearer {{authToken}} header.
+
+The Middleware Chain (controllers/blogs.js):
+
+tokenExtractor runs first: Verifies your JWT and populates req.decodedToken.
+
+blogFinder runs second: Queries the database using Blog.findByPk(req.params.id). If the blog doesn't exist, it short-circuits and returns a 404 Not Found. If it exists, it attaches the blog to req.blog.
+
+The Ownership Guard Clause:
+
+Inside the DELETE route handler, your code checks:
+
+JavaScript
+if (req.blog.userId !== req.decodedToken.id) {
+  return res.status(403).json({ error: 'Unauthorized: Only the owner of a blog can delete it' });
+}
+If the user trying to delete the blog is not the owner (or using another user's token), it halts and returns a 403 Forbidden.
+
+Destruction & Response:
+
+If the ownership check passes, await req.blog.destroy() deletes the row from PostgreSQL.
+
+The server responds with a clean 204 No Content status.

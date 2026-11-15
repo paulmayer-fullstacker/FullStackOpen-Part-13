@@ -18,13 +18,13 @@ const loginRouter = require('./controllers/login') // Import login router.
 // Import our centralised error handling middleware
 const { errorHandler } = require('./utils/errorMiddleware')
 
-// Middleware to parse incoming JSON payloads in request bodies (e.g., req.body).
+// Mount middleware to parse incoming JSON payloads in request bodies (e.g., req.body).
 app.use(express.json())
 // Mount the routers onto their respective route prefixes.
 app.use('/api/blogs', blogsRouter)
 app.use('/api/users', userRouter)
 app.use('/api/login', loginRouter) // Mount login router.
-// Register error handler last (after all routes have been defined) so it can intercept any errors passed down the pipeline.
+// Mount/register error handler last (after all routes have been defined) so it can intercept any errors passed down the pipeline.
 app.use(errorHandler)
 
 // Asynchronous startup function ensures Db connection succeeds before starting the server.

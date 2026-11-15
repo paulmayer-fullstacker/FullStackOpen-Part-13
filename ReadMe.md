@@ -356,3 +356,24 @@ The repository has been extended to implement ownership-based authorisation for 
 ### Files Updated
 - **`controllers/blogs.js`**: Added the ownership guard clause checking `req.blog.userId === req.decodedToken.id` to the `DELETE` route handler.
 - **`requestsAuth.rest`**: Added a second user creation, login token capture (`@otherAuthToken`), and failure testing for the `403 Forbidden` restriction.
+
+
+## Blog List Backend Exercise-12
+
+The repository has been extended to implement relational data fetching (eager loading) between the `User` and `Blog` models using Sequelize associations. Each blog record now automatically populates the user who added it, and each user record lists all the blogs they have published.
+
+### Key Implementations & Enhancements
+
+- **Relational Data Fetching (Eager Loading via `include`)**:
+  - **`GET /api/blogs`**: Updated to include the associated `User` model, exposing safe, public details (`name`, `username`) while strictly excluding sensitive information like `passwordHash`.
+  - **`GET /api/users` & `GET /api/users/:id`**: Updated to include associated `blogs`, using attribute exclusions (`attributes: { exclude: ['userId'] }`) to clean up the JSON payload by hiding redundant foreign keys inside nested blog objects.
+
+- **Author vs. User Data Distinction**:
+  - **`author` (String Attribute)**: A free-form text column on the `Blog` model used in earlier course exercises.
+  - **`user` (Relational Foreign Key / Account)**: The system account (`userId`) linked via authentication tokens when the blog was created.
+  - *Note on Data Discrepancy:* During early API testing, a single logged-in user account may display blogs associated with various independent author names (e.g., Dave Allen, John Smith). This is expected behavior reflecting the transition from manual string-based authors to database-level user relations.
+
+### Files Updated
+- **`controllers/blogs.js`**: Added the `include` option to `Blog.findAll()` to fetch joined user details with filtered attributes.
+- **`controllers/users.js`**: Imported the `Blog` model and added the `include` option to user retrieval routes, ensuring password hashes are excluded from public API responses.
+- **`models/index.js`**: The `include` clauses in users and blogs controllers work, because `models/index.js` already contains two key relationship definitions: `User.hasMany(Blog)` and `Blog.belongsTo(User)`.

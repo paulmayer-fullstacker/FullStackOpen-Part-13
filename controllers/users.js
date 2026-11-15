@@ -3,8 +3,8 @@
 
 const router = require('express').Router()
 const bcrypt = require('bcrypt')
-// Import the User model from our centralised models directory.
-const { User } = require('../models')
+// Import the User and Blog models from our centralised models directory. So we can get users and the blogs they authored.
+const { User, Blog } = require('../models')
 
 // Custom middleware to find a user by their unique username (used for PUT).
 const userFindByUsername = async (req, res, next) => {
@@ -20,7 +20,17 @@ const userFindByUsername = async (req, res, next) => {
 // API Route: GET all user objects from the Db using the Sequelize User model.
 router.get('/', async (req, res) => {
     // Blog.findAll() translates to SQL: SELECT * FROM users.
-  const users = await User.findAll()
+  const users = await User.findAll({
+    // Exclude the password hash from the user object
+    attributes: { exclude: ['passwordHash'] },
+    // To show the blogs that a user has published, add the include option,
+    include: {
+      // telling Sequelize to fetch the joined Blog model. Works because: User.hasMany(Blog)
+      model: Blog,
+      // Exclude the userId from each blog (repetition). Redundant: we know whothe author is.
+      attributes: { exclude: ['userId'] } 
+    }
+  })
   res.json(users)
 })
 
@@ -66,7 +76,17 @@ router.put('/:username', userFindByUsername, async (req, res, next) => {
 router.get('/:id', async (req, res, next) => {
   try {
     // Query Db for user matching the PK (id) provided in the URL parameters (e.g., /api/users/3 : SELECT * FROM users WHERE id = 3 LIMIT 1;
-    const user = await User.findByPk(req.params.id)
+    const user = await User.findByPk(req.params.id, {
+      // Exclude the password hash from the user object
+      attributes: { exclude: ['passwordHash'] },
+      // To show the blogs that a user has published, add the include option,
+      include: {
+        // telling Sequelize to fetch the joined Blog model. Works because: User.hasMany(Blog)
+        model: Blog,
+        // Exclude the userId from each blog (repetition). Redundant: we know whothe author is.
+        attributes: { exclude: ['userId'] }
+      }
+    })
     if (user) {
       // if user found, send the user object back to the client as a JSON response.
       res.json(user)

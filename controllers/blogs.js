@@ -23,7 +23,15 @@ const blogFinder = async (req, res, next) => {
 // API Route: GET all blog objects from the Db using the Sequelize Blog model.
 router.get('/', async (req, res) => {
   // Blog.findAll() translates to SQL: SELECT * FROM blogs.
-  const blogs = await Blog.findAll()
+  const blogs = await Blog.findAll({
+    // To make each blog show the user who added it, add the include option,
+    include: {
+      // telling Sequelize to fetch the joined User model. Works because: Blog.belongsTo(User).
+      model: User,
+      // However, only expose the name and username fields. So, exclude the user's password hash.
+      attributes: ['name', 'username'] 
+    }
+  })
   res.json(blogs)
 })
 
@@ -36,7 +44,7 @@ router.post('/', tokenExtractor, async (req, res, next) => {
     const blog = await Blog.create({
       // spreading the client's request body properties 
       ...req.body,
-      // and explicitly linking it to the authenticated user via the foreign key (userId).
+      // and explicitly link it to the authenticated user via the foreign key (userId).
       userId: user.id
     })
     // If success: send an HTTP 201 (Created) code back to client, with newly created blog object (as JSON), inc. its new Db id.

@@ -19,7 +19,7 @@ User.init({
     validate: { // Validate object.
       // Sequelize built-in isEmail validator checks if the string passed to username matches standard email formatting.
       isEmail: {
-        // If it fails: Sequelize prevents it from hitting the database and throws a SequelizeValidationError containing your custom error message.
+        // If it fails: Sequelize prevents it from hitting the database and throws a SequelizeValidationError containing our custom error message.
         msg: "username must be a valid email address"
       }
     }
