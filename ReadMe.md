@@ -397,3 +397,23 @@ The repository has been extended to implement optional keyword filtering for the
 
 ### Files Updated
 - **`controllers/blogs.js`**: Added the `Op` import, initialised the dynamic `where` object, and configured `Op.iLike` substring matching for the `GET /api/blogs` route handler.
+
+## Blog List Backend Exercise-14
+
+The repository has been extended to enhance the keyword search capability on the `GET /api/blogs` endpoint, allowing clients to filter blogs where the search keyword appears in **either** the `title` field **or** the `author` field.
+
+### Key Implementations & Enhancements
+
+* **Multi-Field OR Searching (`controllers/blogs.js`)**:
+
+  * Expanded the conditional `where` object inside the `GET /api/blogs` route handler using Sequelize's **`Op.or`** operator.
+
+  * Supplied an array of query conditions targeting both the `title` and `author` columns (`where[Op.or] = [...]`).
+
+  * Retained case-insensitive substring matching (`Op.iLike` with `%` wildcards) across both fields, ensuring queries like `GET /api/blogs?search=jami` return matching records regardless of whether the keyword matches the author's name or the blog's title.
+
+  * Preserved query optimization so that standard `GET /api/blogs` requests without a `search` parameter continue to bypass unnecessary SQL `WHERE` clauses.
+
+### Files Updated
+
+* **`controllers/blogs.js`**: Updated the `req.query.search` conditional block in the `GET /api/blogs` route handler to evaluate an `Op.or` array across both `title` and `author`.

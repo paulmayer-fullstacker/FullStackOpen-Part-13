@@ -30,10 +30,12 @@ router.get('/', async (req, res) => {
 
   // if: a 'search' query parameter was provided in the URL (e.g., /api/blogs?search=react)
   if (req.query.search) {
-    // Update the Sequelize 'where' object using Op.iLike (instead of Op.substring), for case-insensitive matching.
-    where.title = {
-      [Op.iLike]: `%${req.query.search}%` // % wildcards ensure matching anywhere in the title.
-    }
+    // Use Op.or (OR) with an array of conditions,
+    where[Op.or] = [
+      // to check title OR author for search parameter (case-insensitively via Op.iLike).
+      { title: { [Op.iLike]: `%${req.query.search}%` } },
+      { author: { [Op.iLike]: `%${req.query.search}%` } }
+    ]
   }
   // else: (no search query was passed), 'where' is {} and no WHERE clause is generated.
 
