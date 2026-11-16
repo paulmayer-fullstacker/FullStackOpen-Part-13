@@ -436,3 +436,39 @@ The repository has been extended to implement result ordering on the `GET /api/b
 ### Files Updated
 
 * **`controllers/blogs.js`**: Added the `order: [['likes', 'DESC']]` configuration option to `Blog.findAll()` within the `GET /api/blogs` route handler.
+
+
+## Blog List Backend Exercise-16
+
+The repository has been extended to implement an author statistics endpoint (`GET /api/authors`) that calculates the number of blogs and total likes for each author directly at the database level using advanced SQL aggregation functions.
+
+### Key Implementations & Enhancements
+
+* **Database-Level Aggregation (`controllers/authors.js`)**:
+
+  * Created a dedicated modular controller and route at `/api/authors`.
+
+  * Utilise Sequelize's `sequelize.fn('COUNT', sequelize.col('id'))` with an alias (`'blogs'`) to calculate the total number of blogs per author.
+
+  * Utilise Sequelize's `sequelize.fn('SUM', sequelize.col('likes'))` with an alias (`'likes'`) to aggregate the total likes across an author's posts.
+
+  * Apply `group: ['author']` to group rows by author name.
+
+* **Database-Level Ordering**:
+
+  * Enforce sorting on the aggregated results directly in the SQL query using `order: [[sequelize.fn('SUM', sequelize.col('likes')), 'DESC']]`. Thus, authors with the highest total likes appear at the top of the array.
+
+* **Main Application Routing (`index.js`)**:
+
+  * Import and mount the new `authorsRouter` under the `/api/authors` prefix.
+
+### Core Author API Endpoints
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **GET** | `/api/authors` | Retrieves an aggregated list of authors showing their total blog count and sum of likes, ordered by likes descending (`200 OK`). |
+
+### Files Created & Updated
+
+* **`controllers/authors.js`**: Created new modular controller containing the `GET /` handler with `sequelize.fn`, `group`, and `order` database aggregations.
+* **`index.js`**: Imported `authorsRouter` and mounted it on `/api/authors`.

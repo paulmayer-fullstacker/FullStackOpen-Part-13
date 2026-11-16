@@ -11,19 +11,21 @@ const { connectToDatabase } = require('./utils/db')
 // Import syncModels from our models directory.
 const { syncModels } = require('./models')
 
-// Import our modularised blog and user routers.
+// Import our modularised blog, user, login and author routers.
 const blogsRouter = require('./controllers/blogs')
 const userRouter = require('./controllers/users')
 const loginRouter = require('./controllers/login') // Import login router.
+const authorsRouter = require('./controllers/authors')  // Import our authors router.
 // Import our centralised error handling middleware
 const { errorHandler } = require('./utils/errorMiddleware')
 
 // Mount middleware to parse incoming JSON payloads in request bodies (e.g., req.body).
 app.use(express.json())
 // Mount the routers onto their respective route prefixes.
-app.use('/api/blogs', blogsRouter)
-app.use('/api/users', userRouter)
-app.use('/api/login', loginRouter) // Mount login router.
+app.use('/api/blogs', blogsRouter) // Mount the blogs router under /api/blogs.
+app.use('/api/users', userRouter)  // Mount users router under /api/users.
+app.use('/api/login', loginRouter) // Mount the login router.
+app.use('/api/authors', authorsRouter)  // Mount the authors router.
 // Mount/register error handler last (after all routes have been defined) so it can intercept any errors passed down the pipeline.
 app.use(errorHandler)
 

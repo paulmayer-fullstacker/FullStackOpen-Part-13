@@ -160,3 +160,7 @@ DELETE {{baseUrl}}/blogs/999999
 
 ### Delete a blog by malformed id (401 Unaurthorised) Token Missing
 DELETE {{baseUrl}}/blogs/abc
+
+### Get author summary statistics (Blogs count and total likes per author, ordered by likes DESC)
+### Sequlize will perform: Executing (default): SELECT "author", COUNT("id") AS "blogs", SUM("likes") AS "likes" FROM "blogs" AS "blog" GROUP BY "author" ORDER BY SUM("likes") DESC;
+GET http://localhost:3001/api/authors
