@@ -472,3 +472,66 @@ The repository has been extended to implement an author statistics endpoint (`GE
 
 * **`controllers/authors.js`**: Created new modular controller containing the `GET /` handler with `sequelize.fn`, `group`, and `order` database aggregations.
 * **`index.js`**: Imported `authorsRouter` and mounted it on `/api/authors`.
+
+
+## Blog List Backend Exercise-17
+
+The repository has been extended to implement an automated end-to-end API testing suite and continuous integration (CI) pipeline via GitHub Actions. The application now supports isolated database switching between development (`blog_db`) and testing (`test_db`), cross-platform test execution using `cross-env`, and automated database resetting between test runs.
+
+### Key Implementations & Enhancements
+
+- **Environment-Based Database Switching (`utils/config.js` & `utils/db.js`)**:
+  * Updated `utils/config.js` to dynamically select `TEST_DATABASE_URL` when `process.env.TESTING === 'true'`, defaulting to `DATABASE_URL` during normal operation.
+  * Configured `utils/db.js` to connect to the dedicated PostgreSQL `test_db` database during test runs, ensuring automated tests remain completely isolated from development records.
+
+- **Test Health Check & Database Reset Endpoints (`index.js`)**:
+  * Added a root health check endpoint (`GET /`) used by the CI pipeline to verify that the Express server has booted and is ready to accept connections.
+  * Implemented a conditional reset endpoint (`POST /api/reset`) that is mounted when `TESTING === 'true'`, truncating all database tables (`Blog` and `User`) with `restartIdentity` and `cascade` options before each test block.
+
+- **Cross-Platform Test Scripts (`package.json`)**:
+  * Installed `cross-env` and `axios` as development dependencies (`devDependencies`).
+  * Configured `"start:test"` (`cross-env TESTING=true node index.js`) and `"test"` (`cross-env TESTING=true node --test --test-concurrency=1 tests/api_ch3.test.js`). The cross-env prefix ensures that the same commands always execute reliably across Windows, macOS, and Linux environments without OS-specific shell workarounds.
+  * Enforced sequential test execution (`--test-concurrency=1`) to prevent race conditions during shared database state resets.
+
+- **Automated CI/CD Pipeline (`.github/workflows/test.yml`)**:
+  * Integrated the course test suite (`tests/api_ch3.test.js`) and GitHub Actions workflow (`API Tests`).
+  * Automatically provisions an ephemeral PostgreSQL 17 service container (`test_db`), installs dependencies via `npm ci`, boots the server in test mode, and validates all 8 automated tests covering the Blogs, Users, and Authors APIs on every push or pull request to `main`.
+
+### Test-Only & Health Check Endpoints
+
+| Method | Endpoint | Description |
+| :--- | :--- | :--- |
+| **GET** | `/` | Health check endpoint returning a `200 OK` status confirming the server is active. |
+| **POST** | `/api/reset` | Available only when `TESTING=true`. Truncates all database tables and resets primary key sequences to ensure clean test isolation (`204 No Content`). |
+
+### Running the Automated Test Suite Locally
+
+#### Prerequisites
+
+- A dedicated PostgreSQL test database created locally (`psql -U postgres -c "CREATE DATABASE test_db;"`).
+- `TEST_DATABASE_URL` configured in our `.env` file pointing to `test_db`.
+
+#### Executing Tests
+
+Two terminal instances are required to execute the test procedure:
+
+1. **Terminal 1 — Start the backend server in test mode:**
+
+   ```bash
+   npm run start:test
+   ```
+
+2. **Terminal 2 — Run the automated test suite:**
+
+   ```bash
+   npm test
+   ```
+
+### Files Created & Updated
+
+- **`utils/config.js`**: Added conditional logic to export `TEST_DATABASE_URL` when `TESTING === 'true'`.
+- **`utils/db.js`**: Updated database connection initialisation to use the environment-aware database URI.
+- **`index.js`**: Added the `GET /` health check route and the environment-guarded `POST /api/reset` truncation endpoint.
+- **`package.json` & `package-lock.json`**: Added `cross-env` and `axios` dev dependencies along with the `"start:test"` and `"test"` npm scripts.
+- **`tests/api_ch3.test.js`**: Added the automated Node native test runner suite verifying Blogs, Users, and Authors endpoints.
+- **`.github/workflows/test.yml`**: Configured the GitHub Actions workflow for automated CI testing against a PostgreSQL 17 service container.
