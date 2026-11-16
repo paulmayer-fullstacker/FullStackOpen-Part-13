@@ -6,8 +6,10 @@
 require('dotenv').config()
 // Export this object, to make it available for other modules.
 module.exports = {
-  // PostgreSQL database connection string.
+  // PostgreSQL Db connection string.
   DATABASE_URL: process.env.DATABASE_URL,
+  // PostgreSQL Db connection string for automated testing.
+  TEST_DATABASE_URL: process.env.TEST_DATABASE_URL,
   // Custom PORT from env var or fallback (3001).
   PORT: process.env.PORT || 3001,
   // Export our secret key for signing JWTs.

@@ -1,13 +1,22 @@
 // util/db.js:
-// Manage Db connection.
+// Manage Db connection, supporting conditional 'test' Db switching.
 
 const { Sequelize } = require('sequelize')
 // Import the DATABASE_URL from our centralised config file.
-const { DATABASE_URL } = require('./config')
+const { DATABASE_URL, TEST_DATABASE_URL } = require('./config')
+
+// Conditional database URL selection
+// If: TESTING env var 'true',
+const dbUrl = process.env.TESTING === 'true'
+//  use TEST_DATABASE_URL. 
+? TEST_DATABASE_URL
+// else: use DATABASE_URL
+: DATABASE_URL
+
 // Initialise Sequelize with the Db connection URL.
-const sequelize = new Sequelize(DATABASE_URL)
+const sequelize = new Sequelize(dbUrl)
 // Define async function to test the database connection.
-const connectToDatabase = async () => {
+const connectToDb = async () => {
   // Use a try/catch block to handle any connection errors.
   try {
     // Ask Sequelize to test the connection to the database (authenticate), and await response.
@@ -25,4 +34,4 @@ const connectToDatabase = async () => {
   }
 }
 // Export the connection function and the sequelize instance for other modules to use.
-module.exports = { connectToDatabase, sequelize }
+module.exports = { connectToDb, sequelize }
