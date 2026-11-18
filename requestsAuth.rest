@@ -164,3 +164,46 @@ DELETE {{baseUrl}}/blogs/abc
 ### Get author summary statistics (Blogs count and total likes per author, ordered by likes DESC)
 ### Sequlize will perform: Executing (default): SELECT "author", COUNT("id") AS "blogs", SUM("likes") AS "likes" FROM "blogs" AS "blog" GROUP BY "author" ORDER BY SUM("likes") DESC;
 GET http://localhost:3001/api/authors
+
+
+###
+### CHAPTER-4
+
+### Year Tests:
+
+### Post blog with valid year:  Expected result: 201 Created
+POST {{baseUrl}}/blogs
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "title": "First Class Blog with Year",
+  "author": "Paul Mayer",
+  "url": "https://fullstackopen.com",
+  "year": 2024
+}
+
+### Post blog with invalid year (too old). Expected: 400 Bad Request.
+POST {{baseUrl}}/blogs
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "title": "Too Old Blog",
+  "author": "Paul Mayer",
+  "url": "https://fullstackopen.com",
+  "year": 1989
+}
+
+### Post blog with invalid year (future). Expected: 400 Bad Request.
+POST {{baseUrl}}/blogs
+Content-Type: application/json
+Authorization: Bearer {{authToken}}
+
+{
+  "title": "Back to the Future Blog",
+  "author": "Paul Mayer",
+  "url": "https://fullstackopen.com",
+  "year": 2030
+}
+

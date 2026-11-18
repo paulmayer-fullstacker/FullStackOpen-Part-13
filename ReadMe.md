@@ -584,3 +584,53 @@ graph TD
 - **`utils/db.js`**: Implemented `runMigrations` and `rollbackMigration` using `Umzug` and `SequelizeStorage`, integrating migration execution into `connectToDatabase()`.
 - **`migrations/<timestamp>_initialise_users_and_blogs.js`**: Created the initial migration script (`up` and `down` methods) to create and drop the `users` and `blogs` tables along with their `created_at` and `updated_at` columns.
 - **`models/index.js` & `index.js`**: Removed `syncModels` and all `sync()` calls in favour of migration-driven schema initialisation.
+
+
+## Blog List Backend Exercise-19
+
+The repository has been extended to add a new `year` attribute to the `blogs` table via database migration and enforce strict validation rules on the `Blog` model to ensure data integrity.
+
+### Key Implementations & Enhancements
+
+* **Database Migration (`migrations/`)**:
+
+  * Created a new migration file using `umzug` to add an integer `year` column to the `blogs` table.
+
+  * Implemented both `up` and `down` methods to support applying and rolling back the schema change safely.
+
+* **Model Validation Rules (`models/blog.js`)**:
+
+  * Added the `year` attribute to the `Blog` model configuration (`DataTypes.INTEGER`).
+
+  * Implemented Sequelize built-in validation (`isInt`) to ensure the input is strictly an integer with a custom error message (`'Year must be integer'`).
+
+  * Enforced a minimum allowed year (`min: 1991`, marking the inception of the first website) with custom messaging (`'Earliest allowed year is 1991'`).
+
+  * Implemented a dynamic custom validator function (`maxYear(value)`) that evaluates `new Date().getFullYear()` at runtime to prevent future years from being recorded without hardcoding static upper bounds.
+
+* **Controller & API Integration (`controllers/blogs.js`)**:
+
+  * Leveraged object spreading (`...req.body`) within `Blog.create(...)` to automatically accept and validate the `year` field from client requests.
+
+  * Ensured Sequelize validation errors are caught and forwarded to the centralised error handler middleware to return `400 Bad Request` responses on invalid inputs.
+
+### Blog Model Validation Specifications
+
+| Validation Rule | Constraint / Logic | Error Message | 
+| ----- | ----- | ----- | 
+| **`isInt`** | Integer check | `Year must be integer` | 
+| **`min`** | `>= 1991` | `Earliest allowed year is 1991` | 
+| **`maxYear`** | `<= new Date().getFullYear()` | `Year cannot be beyond the current year (<dynamic_year>)` | 
+
+### Continuous Integration & Test Suite Note
+
+* **Legacy Test Suite vs. Chapter 4 Evolution**: 
+  The automated GitHub Actions workflow (`API Tests`) currently executes the legacy Chapter 3 test suite (`tests/api_ch3.test.js`). Because Exercise 19 introduces strict validation rules on the `Blog` model (such as the `year` attribute), the older test suite may trigger pipeline discrepancies during push events. This behavior is expected as the application transitions into Chapter 4 architectures, with future test suites anticipated to align cleanly with the updated model constraints.
+
+### Files Created & Updated
+
+* **`migrations/<timestamp>_add_year_to_blogs.js`**: Created migration script adding the `year` column to the `blogs` table.
+
+* **`models/blog.js`**: Added the `year` attribute and configured `validate` options (`isInt`, `min`, and `maxYear`).
+
+* **`controllers/blogs.js`**: Verified and confirmed seamless request body forwarding for the new `year` attribute.
