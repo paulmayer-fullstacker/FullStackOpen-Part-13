@@ -535,3 +535,52 @@ Two terminal instances are required to execute the test procedure:
 - **`package.json` & `package-lock.json`**: Added `cross-env` and `axios` dev dependencies along with the `"start:test"` and `"test"` npm scripts.
 - **`tests/api_ch3.test.js`**: Added the automated Node native test runner suite verifying Blogs, Users, and Authors endpoints.
 - **`.github/workflows/test.yml`**: Configured the GitHub Actions workflow for automated CI testing against a PostgreSQL 17 service container.
+
+
+## Blog List Backend Exercise-18
+
+The repository has been refactored to replace automatic model schema synchronisation (`sync()`) with version-controlled database migrations powered by `umzug`. Database table creation is now explicitly defined in migration scripts, ensuring predictable schema evolution and safe database initialisation upon server startup.
+
+### Architectural Overview & Modular Design
+
+The application startup pipeline now delegates schema creation and verification to `umzug` before accepting incoming HTTP requests:
+
+```mermaid
+graph TD
+    Start["Server Startup (index.js)"] --> ConnectDB["connectToDatabase (utils/db.js)"]
+    ConnectDB --> Auth["Sequelize Authenticate"]
+    Auth --> RunMig["runMigrations (umzug)"]
+    RunMig --> CheckMeta["Check 'migrations' Table"]
+    CheckMeta --> ExecMig["Execute Pending Migrations (migrations/*.js)"]
+    ExecMig --> PG[("PostgreSQL Database (blog_db)")]
+    ExecMig --> Listen["Express Server Listening (Port 3001)"]
+```
+
+### Key Implementations & Enhancements
+
+- **Migration Runner Integration (`utils/db.js`)**:
+  * Installed `umzug` to programmatically manage and execute database migrations during application startup.
+  * Configured `runMigrations` with `SequelizeStorage` to track executed migrations inside a dedicated `migrations` table in PostgreSQL, resolving migration files from the root `migrations/` directory.
+  * Exposed `rollbackMigration` alongside `connectToDatabase` to support programmatic migration rollbacks when needed.
+
+- **Initial Database Schema Migration (`migrations/`)**:
+  * Dropped all legacy tables (`blogs` and `users`) in PostgreSQL to ensure a clean migration baseline.
+  * Created the initial migration script defining both the `users` and `blogs` tables, explicitly specifying primary keys, foreign key references (`user_id` referencing `users.id`), and required `created_at` and `updated_at` timestamp columns.
+
+- **Removal of Automatic Schema Synchronisation (`models/index.js` & `index.js`)**:
+  * Removed all `User.sync()`, `Blog.sync()`, and `sync({ alter: true })` calls from the codebase so that schema management is handled exclusively through versioned migrations without conflicts.
+
+### Database Schema Initialised by Migration
+
+| Table | Columns | Notes |
+| :--- | :--- | :--- |
+| **`users`** | `id`, `username`, `name`, `password_hash`, `created_at`, `updated_at` | `username` enforced as unique and non-nullable; timestamps managed explicitly in migration. |
+| **`blogs`** | `id`, `author`, `url`, `title`, `likes`, `user_id`, `created_at`, `updated_at` | `user_id` configured as a foreign key referencing `users(id)`; default `likes` set to `0`. |
+| **`migrations`** | `name` | Automatically created and maintained by `umzug` (`SequelizeStorage`) to log applied migration files. |
+
+### Files Created & Updated
+
+- **`package.json` & `package-lock.json`**: Installed `umzug` as a project dependency.
+- **`utils/db.js`**: Implemented `runMigrations` and `rollbackMigration` using `Umzug` and `SequelizeStorage`, integrating migration execution into `connectToDatabase()`.
+- **`migrations/<timestamp>_initialise_users_and_blogs.js`**: Created the initial migration script (`up` and `down` methods) to create and drop the `users` and `blogs` tables along with their `created_at` and `updated_at` columns.
+- **`models/index.js` & `index.js`**: Removed `syncModels` and all `sync()` calls in favour of migration-driven schema initialisation.

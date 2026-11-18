@@ -8,8 +8,8 @@ const app = express()
 const { PORT } = require('./utils/config')
 // Import our custom Db connection utility.
 const { connectToDb } = require('./utils/db')
-// Import Blog, User and syncModels from our models directory.
-const { Blog, User, syncModels } = require('./models')  // Blog and User for test routes.
+// Import Blog and User from our models directory. syncModels removed.
+const { Blog, User } = require('./models')  // Blog and User for test routes.
 
 // Import our modularised blog, user, login and author routers.
 const blogsRouter = require('./controllers/blogs')
@@ -50,12 +50,29 @@ app.use(errorHandler)
 const start = async () => {
   // Establish the Db connection first.
   await connectToDb()
-  // then, synchronise models with the database (applying any schema changes with { alter: true }).
-  await syncModels()
-  // finally, start the Express server once the Db is successfully connected and synchronised.
+  // // NOTE: await syncModels() removed as migrations now handle database table creation and schema updates on startup.
+  // // then, synchronise models with the database (applying any schema changes with { alter: true }).
+  // await syncModels()
+  // Start the Express server once the Db is successfully connected and migrated.
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
   })
 }
 // Boot the application startup process.
 start()
+
+// Terminal 1:
+// psql postgres://postgres:root@localhost:5432/blog_db
+// DROP TABLE IF EXISTS blogs CASCADE;
+// DROP TABLE IF EXISTS users CASCADE;
+// DROP TABLE IF EXISTS migrations CASCADE;
+
+// Terminal 2:
+// npm start
+
+// Terminal 1:
+// _db# \d
+// Display tables
+// \d users
+// \d blogs
+// _db# \q

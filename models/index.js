@@ -9,16 +9,18 @@ const User = require('./user')
 User.hasMany(Blog)
 Blog.belongsTo(User)
 
-// Synchronise the models with the Db schemas for Blogs and Users
-const syncModels = async () => {
-  // User must be synced before Blog because Blog will reference the User's id.
-  await User.sync({ alter: true }) // alter: true will apply any schema changes to the Db.
-  await Blog.sync({ alter: true })
-}
+// // NOTE: syncModels has been completely removed. 
+// // Database schema management is now handled entirely by our migrations and Umzug.
+// // Synchronise the models with the Db schemas for Blogs and Users
+// const syncModels = async () => {
+//   // User must be synced before Blog because Blog will reference the User's id.
+//   await User.sync({ alter: true }) // alter: true will apply any schema changes to the Db.
+//   await Blog.sync({ alter: true })
+// }
 
 // Export single object containing all Db schemas and the synchModels.
 module.exports = {
   Blog,
   User,
-  syncModels
+ // syncModels
 }
