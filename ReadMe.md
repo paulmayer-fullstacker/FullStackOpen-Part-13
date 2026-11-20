@@ -634,3 +634,41 @@ The repository has been extended to add a new `year` attribute to the `blogs` ta
 * **`models/blog.js`**: Added the `year` attribute and configured `validate` options (`isInt`, `min`, and `maxYear`).
 
 * **`controllers/blogs.js`**: Verified and confirmed seamless request body forwarding for the new `year` attribute.
+
+
+## Blog List Backend Exercise-20
+
+The repository has been extended to lay the database and model foundation for a user reading list feature using a many-to-many relationship between `User` and `Blog`. Via a versioned database migration, Sequelize join table model, and aliased `belongsToMany` associations, users can be linked to reading-list blogs with a per-entry `read` boolean status starting in the unread (`false`) state, while keeping HTTP endpoints for adding and displaying reading lists deferred to the next exercise.
+
+### Key Implementations & Enhancements
+
+- **Reading List Join Table Migration (`migrations/`)**:
+  - Created a new migration script (`20261119_00_add_reading_lists.js`) executed via `umzug` to create the `reading_lists` join table in PostgreSQL.
+  - Defined `id` (primary key, auto-increment), `user_id` (non-nullable foreign key referencing `users.id`), `blog_id` (non-nullable foreign key referencing `blogs.id`), `read` (non-nullable boolean defaulting to `false` so added entries begin unread), and `created_at` / `updated_at` timestamp columns.
+  - Implemented both `up` (`createTable`) and `down` (`dropTable`) methods for clean application and rollback support.
+
+- **Join Table Model (`models/reading_list.js`)**:
+  - Created the `ReadingList` model extending Sequelize's `Model` class and connected to the database instance from `utils/db.js`.
+  - Mapped `camelCase` model attributes (`userId`, `blogId`, `read`) to `snake_case` database columns (`user_id`, `blog_id`, `read`) using `underscored: true`, with `defaultValue: false` on `read` to enforce the initial unread state.
+
+- **Many-to-Many Associations & Aliases (`models/index.js`)**:
+  - Imported `ReadingList` into `models/index.js` and exported it alongside `Blog` and `User` from the central model portal.
+  - Configured `User.belongsToMany(Blog, { through: ReadingList, as: 'readingListBlogs' })` and `Blog.belongsToMany(User, { through: ReadingList, as: 'readingListUsers' })` alongside the existing one-to-many creator relationship (`User.hasMany(Blog)` / `Blog.belongsTo(User)`).
+  - Used explicit `as` aliases (`readingListBlogs` and `readingListUsers`) so reading-list associations remain distinct from blog authorship and do not cause naming collisions.
+
+### Reading List Join Table Schema
+
+| Column | Type & Constraints | Notes |
+| :--- | :--- | :--- |
+| **`id`** | `INTEGER`, Primary Key, Auto-Increment | Unique identifier for each reading list entry. |
+| **`user_id`** | `INTEGER`, `NOT NULL`, FK $\rightarrow$ `users(id)` | Identifies the user whose reading list contains the blog. |
+| **`blog_id`** | `INTEGER`, `NOT NULL`, FK $\rightarrow$ `blogs(id)` | Identifies the blog added to the user's reading list. |
+| **`read`** | `BOOLEAN`, `NOT NULL`, Default `false` | Tracks read status; defaults to `false` (unread) and can later be marked as read (`true`). |
+| **`created_at`** | `DATE`, `NOT NULL` | Timestamp when the reading list entry was created. |
+| **`updated_at`** | `DATE`, `NOT NULL` | Timestamp when the reading list entry was last updated. |
+
+### Files Created & Updated
+
+- **`migrations/20261119_00_add_reading_lists.js`**: Created migration script defining `up` and `down` methods for the `reading_lists` join table.
+- **`models/reading_list.js`**: Created the `ReadingList` Sequelize model representing entries in `reading_lists`.
+- **`models/index.js`**: Imported and exported `ReadingList`, and configured `belongsToMany` associations with `readingListBlogs` and `readingListUsers` aliases.
