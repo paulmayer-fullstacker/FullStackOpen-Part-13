@@ -1,22 +1,28 @@
 // seed.js:
-// Script to reset and seed the Db with initial blog and user data.
+// Chapter-4 Seeding. Script to reset rows and seed initial user and blog data
+// while preserving migration-managed schema via umzug / connectToDb.
 
 require('dotenv').config()
 const bcrypt = require('bcrypt')
-const { sequelize } = require('./utils/db')
-const { User, Blog } = require('./models') // Import User and Blog from our centralised models entry point.
+// Import connectToDb (which runs umzug migrations) instead of relying on sequelize.sync({ force: true })
+const { connectToDb } = require('./utils/db')
+// Import ReadingList alongside User and Blog so join rows can also be cleared cleanly
+const { User, Blog, ReadingList } = require('./models')
 const seedUsers = require('./utils/seedingUserData')  // Import our seeding users data object (array).
 const seedBlogs = require('./utils/seedingBlogData') // Import our seeding blogs data object (array).
 
 const seedDatabase = async () => {
   try {
-    // Authenticate Db connection.
-    await sequelize.authenticate()
-    console.log('Connected to Db, ready for seeding.')
+    // Connect to Db and ensure all umzug migrations are applied before seeding
+    await connectToDb()
+    console.log('Connected to Db and verified migrations, ready for seeding.')
 
-    // Drop all tables and recreate them cleanly based on model definitions (force: true drops existing tables).
-    await sequelize.sync({ force: true })
-    console.log('All database tables dropped and recreated.')
+    // Replaced sequelize.sync({ force: true }) with row deletion so table schemas
+    // and the 'migrations' tracking table remain controlled strictly by umzug migrations.
+    await ReadingList.destroy({ where: {} })
+    await Blog.destroy({ where: {} })
+    await User.destroy({ where: {} })
+    console.log('Existing reading_lists, blogs, and users records cleared.')
 
     // Seed Users first and store the seeded user instances so we can reference their ids when seeding blogs.
     const seededUsers = []
@@ -42,7 +48,7 @@ const seedDatabase = async () => {
       throw new Error('Cannot seed blogs: No users available.')
     }
 
-     // Loop through the imported blogs array
+    // Loop through the imported blogs array
     for (let blog of seedBlogs) {
       // and create a row for each blog.
       await Blog.create({
@@ -62,5 +68,4 @@ const seedDatabase = async () => {
     process.exit(1)
   }
 }
-
 seedDatabase()

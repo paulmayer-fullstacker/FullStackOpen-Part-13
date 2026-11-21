@@ -16,6 +16,7 @@ const blogsRouter = require('./controllers/blogs')
 const userRouter = require('./controllers/users')
 const loginRouter = require('./controllers/login') // Import login router.
 const authorsRouter = require('./controllers/authors')  // Import our authors router.
+const readingListsRouter = require('./controllers/readingLists')  // Import our reading list router.
 // Import our centralised error handling middleware
 const { errorHandler } = require('./utils/errorMiddleware')
 
@@ -43,6 +44,7 @@ app.use('/api/blogs', blogsRouter) // Mount the blogs router under /api/blogs.
 app.use('/api/users', userRouter)  // Mount users router under /api/users.
 app.use('/api/login', loginRouter) // Mount the login router.
 app.use('/api/authors', authorsRouter)  // Mount the authors router.
+app.use('/api/readinglists', readingListsRouter) // Mount the reading list router.
 // Mount/register error handler last (after all routes have been defined) so it can intercept any errors passed down the pipeline.
 app.use(errorHandler)
 

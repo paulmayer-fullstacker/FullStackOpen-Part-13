@@ -672,3 +672,38 @@ The repository has been extended to lay the database and model foundation for a 
 - **`migrations/20261119_00_add_reading_lists.js`**: Created migration script defining `up` and `down` methods for the `reading_lists` join table.
 - **`models/reading_list.js`**: Created the `ReadingList` Sequelize model representing entries in `reading_lists`.
 - **`models/index.js`**: Imported and exported `ReadingList`, and configured `belongsToMany` associations with `readingListBlogs` and `readingListUsers` aliases.
+
+
+## Blog List Backend Exercise-21
+
+The repository has been extended to complete the user reading list feature by exposing a `POST /api/readinglists` endpoint for adding blogs to a user's reading list and updating `GET /api/users/:id` to return the user's `readings` collection alongside their authored blogs, while omitting join-table metadata and `passwordHash`.
+
+### Key Implementations & Enhancements
+
+- **Reading Lists Router (`controllers/readingLists.js` & `index.js`)**:
+  - Implemented `POST /api/readinglists` to accept `userId` and `blogId` from the request body, validate that both IDs are present (`400 Bad Request` when missing), and verify that matching `User` and `Blog` records exist in PostgreSQL (`404 Not Found` when either record does not exist).
+  - Created entries in `ReadingList` starting in the unread state (`read: false`) and returned HTTP `201 Created` with the newly created join-table record, forwarding unexpected errors to the centralised `errorHandler` middleware.
+  - Imported `readingListsRouter` and mounted it at `/api/readinglists` in `index.js` ahead of `errorHandler`.
+
+- **User Reading List Retrieval (`controllers/users.js`)**:
+  - Extended `GET /api/users/:id` to include both the user's authored blogs (`User.hasMany(Blog)`) and the blogs associated via the reading-list alias (`as: 'readings'`), while excluding `passwordHash` on the user and `userId` on included blogs.
+  - Configured `through: { attributes: [] }` on the `readings` include block so each returned blog object stays clean without join-table metadata.
+
+- **REST Client Testing & Legacy Seed Notes (`requests.rest`, `seed_Old`, `utils/seedingBlogData_Old`)**:
+  - Added Exercise-21 request blocks to `requests.rest` covering valid `POST /api/readinglists` creation (`201 Created`), missing ID validation (`400 Bad Request`), missing user/blog lookups (`404 Not Found`), and reading-list retrieval via `GET /api/users/:id` (`200 OK`).
+  - Retained `seed_Old` and `utils/seedingBlogData_Old` as historical pre-Chapter-4 seeding references that relied on `sequelize.sync({ force: true })` and lacked `year` values, now superseded by migration-safe seeding workflows.
+
+### Reading List Endpoints & User Response
+
+| Method & Route | Purpose & Behaviour | Key Responses |
+| :--- | :--- | :--- |
+| **`POST /api/readinglists`** | Adds a `blogId` to a `userId`'s reading list with `read: false` after verifying both entities exist. | `201 Created` (created entry), `400 Bad Request` (missing IDs), `404 Not Found` (unknown user/blog). |
+| **`GET /api/users/:id`** | Returns user details (`passwordHash` excluded), authored blogs, and reading-list blogs under `readings` without join-table attributes. | `200 OK` (user + `readings`), `404 Not Found` (unknown user). |
+
+### Files Created & Updated
+
+- **`controllers/readingLists.js`**: Created router handling `POST /api/readinglists` with input validation, existence checks, and unread entry creation.
+- **`index.js`**: Imported and mounted `readingListsRouter` at `/api/readinglists` before `errorHandler`.
+- **`controllers/users.js`**: Updated `GET /api/users/:id` to include `readings` with `through: { attributes: [] }`.
+- **`requests.rest`**: Added Exercise-21 API requests for creating reading-list entries, testing `400`/`404` error handling, and inspecting `GET /api/users/:id`.
+- **`seed_Old` & `utils/seedingBlogData_Old`**: Kept as reference notes for legacy pre-Chapter-4 seeding scripts now superseded by migration-aware seeding.

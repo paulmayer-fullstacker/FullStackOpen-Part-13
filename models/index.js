@@ -11,25 +11,16 @@ User.hasMany(Blog)
 Blog.belongsTo(User)
 
 // Define the many-to-many relationship between User and Blog through the 'reading_lists' join table.
-// Using an alias ('readingListBlogs') keeps reading-list blogs relationship distinct from blogs created by the user relationship.
-User.belongsToMany(Blog, { through: ReadingList, as: 'readingListBlogs' })
+// Using the alias 'readings' (matching the GET /api/users/:id response shape) keeps this
+// reading-list relationship distinct from the blogs created by the user (User.hasMany(Blog)).
+User.belongsToMany(Blog, { through: ReadingList, as: 'readings' })
 // Define the reverse many-to-many relationship between Blog and User through the 'reading_lists' join table.
 // Using an alias ('readingListUsers') keeps users who have the blog on their reading list distinct from the blog's creator relationship.
 Blog.belongsToMany(User, { through: ReadingList, as: 'readingListUsers' })
-
-// // NOTE: syncModels has been completely removed. 
-// // Database schema management is now handled entirely by our migrations and Umzug.
-// // Synchronise the models with the Db schemas for Blogs and Users
-// const syncModels = async () => {
-//   // User must be synced before Blog because Blog will reference the User's id.
-//   await User.sync({ alter: true }) // alter: true will apply any schema changes to the Db.
-//   await Blog.sync({ alter: true })
-// }
 
 // Export single object containing all Db schemas and the synchModels.
 module.exports = {
   Blog,
   User,
   ReadingList,
- // syncModels
 }

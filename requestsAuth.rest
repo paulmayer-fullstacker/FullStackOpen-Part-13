@@ -207,3 +207,62 @@ Authorization: Bearer {{authToken}}
   "year": 2030
 }
 
+
+###
+### READING LIST TESTS
+
+### Add a blog to a user's reading list (valid userId & blogId)
+# Expects: 201 Created with the new ReadingList entry (read defaults to false).
+# Adjust userId and blogId to match existing records in your database if needed.
+POST {{baseUrl}}/readinglists
+Content-Type: application/json
+
+{
+  "userId": 2,
+  "blogId": 3
+}
+
+### Add a second blog to the same user's reading list
+# Useful for verifying that GET /api/users/:id returns multiple blogs in 'readings'.
+POST {{baseUrl}}/readinglists
+Content-Type: application/json
+
+{
+  "userId": 2,
+  "blogId": 4
+}
+
+### Validation error: Missing userId or blogId
+# Expects: 400 Bad Request with { "error": "Both userId and blogId are required" }.
+POST {{baseUrl}}/readinglists
+Content-Type: application/json
+
+{
+  "userId": 1
+}
+
+### Not found error: Non-existent userId
+# Expects: 404 Not Found with { "error": "User with id 99999 not found" }.
+POST {{baseUrl}}/readinglists
+Content-Type: application/json
+
+{
+  "userId": 99999,
+  "blogId": 1
+}
+
+### Not found error: Non-existent blogId
+# Expects: 404 Not Found with { "error": "Blog with id 99999 not found" }.
+POST {{baseUrl}}/readinglists
+Content-Type: application/json
+
+{
+  "userId": 2,
+  "blogId": 99999
+}
+
+### Get user by id including their reading list (readings)
+# Expects: 200 OK with user fields (excluding passwordHash) and a 'readings' array
+# containing the associated blog objects without join-table metadata.
+GET {{baseUrl}}/users/2
+

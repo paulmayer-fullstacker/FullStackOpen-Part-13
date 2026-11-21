@@ -79,13 +79,23 @@ router.get('/:id', async (req, res, next) => {
     const user = await User.findByPk(req.params.id, {
       // Exclude the password hash from the user object
       attributes: { exclude: ['passwordHash'] },
-      // To show the blogs that a user has published, add the include option,
-      include: {
-        // telling Sequelize to fetch the joined Blog model. Works because: User.hasMany(Blog)
-        model: Blog,
-        // Exclude the userId from each blog (repetition). Redundant: we know whothe author is.
-        attributes: { exclude: ['userId'] }
-      }
+      // Use an array in 'include' to fetch both blogs authored by the user (User.hasMany(Blog)),
+      // and blogs on the user's reading list (User.belongsToMany(Blog, { through: ReadingList, as: 'readings' })).
+      include: [
+        {
+          model: Blog,
+          attributes: { exclude: ['userId'] }
+        },
+        {
+          // Matching the 'readings' alias defined on User in models/index.js
+          model: Blog,
+          as: 'readings',
+          attributes: { exclude: ['userId'] },
+          // Omit join table columns (id, userId, blogId, read, createdAt, updatedAt)
+          // from each blog object inside the 'readings' array with attributes: [].
+          through: { attributes: [] }
+        }
+      ]
     })
     if (user) {
       // if user found, send the user object back to the client as a JSON response.
