@@ -39,7 +39,12 @@ ReadingList.init(
     // Converts camelCase attributes (i.e., userId, blogId) to snake_case columns (user_id, blog_id) in PostgreSQL.
     underscored: true,
     // Timestamps are enabled by default (true) to match created_at and updated_at columns created in the migration.
-    modelName: 'reading_list'
+    
+    // Set modelName to 'readingList' so Sequelize names the join metadata property 'readingList'
+    // in the API response to match exercise-22 specification, 
+    // while explicitly setting tableName to 'reading_lists' so the PostgreSQL table name remains unchanged.
+    modelName: 'readingList',
+    tableName: 'reading_lists'
   }
 )
 

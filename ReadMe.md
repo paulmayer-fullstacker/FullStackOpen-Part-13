@@ -707,3 +707,41 @@ The repository has been extended to complete the user reading list feature by ex
 - **`controllers/users.js`**: Updated `GET /api/users/:id` to include `readings` with `through: { attributes: [] }`.
 - **`requests.rest`**: Added Exercise-21 API requests for creating reading-list entries, testing `400`/`404` error handling, and inspecting `GET /api/users/:id`.
 - **`seed_Old` & `utils/seedingBlogData_Old`**: Kept as reference notes for legacy pre-Chapter-4 seeding scripts now superseded by migration-aware seeding.
+
+
+## Blog List Backend Exercise-22
+
+The repository has been extended to expose join-table reading-list details (`read` status and join-table row `id`) on each blog returned in `GET /api/users/:id` under a `readingList` object. By configuring `modelName` and `tableName` on `ReadingList`, adding direct super many-to-many associations in `models/index.js`, and updating `through` attributes and included blog fields in `controllers/users.js`, the single-user endpoint returns reading-list entries aligned with the exercise specification.
+
+### Key Implementations & Enhancements
+
+- **Join Table Model Naming (`models/reading_list.js`)**:
+  - Updated `modelName` from `'reading_list'` to `'readingList'` so Sequelize attaches the join metadata under the `readingList` property name expected by the specification.
+  - Explicitly set `tableName: 'reading_lists'` so changing `modelName` to camelCase does not alter the underlying PostgreSQL table name (`reading_lists`), while retaining `underscored: true` for `snake_case` columns.
+
+- **Super Many-to-Many Associations (`models/index.js`)**:
+  - Kept `User.belongsToMany(Blog, { through: ReadingList, as: 'readings' })` and `Blog.belongsToMany(User, { through: ReadingList, as: 'readingListUsers' })` in place.
+  - Added direct associations on `ReadingList` (`User.hasMany(ReadingList)`, `ReadingList.belongsTo(User)`, `Blog.hasMany(ReadingList, { as: 'readingList' })`, and `ReadingList.belongsTo(Blog, { as: 'blog' })`) to support super many-to-many querying.
+
+- **Single-User Route & Reading List Metadata (`controllers/users.js`)**:
+  - Updated the `readings` include block in `GET /api/users/:id` to replace `through: { attributes: [] }` with `through: { attributes: ['read', 'id'] }` so each reading-list blog includes its `read` boolean and `id` from `reading_lists`.
+  - Excluded `userId`, `createdAt`, and `updatedAt` on included `readings` blog objects to keep each reading-list item concise and aligned with the target structure.
+
+### Updated Single-User Reading List Shape
+
+| Field / Include | Configuration | Returned Shape / Notes |
+| :--- | :--- | :--- |
+| **`readings` blogs** | `as: 'readings'`, `attributes: { exclude: ['userId', 'createdAt', 'updatedAt'] }` | Array of blog objects on the user's reading list with core blog fields. |
+| **`through` attributes** | `through: { attributes: ['read', 'id'] }` | Exposes `read` status and join-table entry `id` from `reading_lists` under `readingList`. |
+
+### Files Created & Updated
+
+- **`models/reading_list.js`**: Set `modelName: 'readingList'` and explicitly configured `tableName: 'reading_lists'`.
+- **`models/index.js`**: Configured direct super many-to-many associations on `ReadingList` alongside existing `belongsToMany` relationships.
+- **`controllers/users.js`**: Updated `GET /api/users/:id` to include `read` and `id` from `through` on `readings` and exclude `userId`, `createdAt`, and `updatedAt` on those blog entries.
+
+### Testing & Verification
+
+* **REST Client Verification (`requests.rest`)**:
+
+  * Tested `GET {{baseUrl}}/users/:id` against PostgreSQL after restarting the server to verify that each entry in `readings` returns a `readingList` object containing `read` (defaulting to `false`) and the join-table `id` (userId and timestamps excluded). This alongside trimmed blog fields and user details (`passwordHash` excluded).

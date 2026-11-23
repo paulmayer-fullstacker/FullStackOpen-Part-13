@@ -3,7 +3,7 @@
 
 const router = require('express').Router()
 const bcrypt = require('bcrypt')
-// Import the User and Blog models from our centralised models directory. So we can get users and the blogs they authored.
+// Import the User and Blog models from our centralised models directory.
 const { User, Blog } = require('../models')
 
 // Custom middleware to find a user by their unique username (used for PUT).
@@ -27,7 +27,7 @@ router.get('/', async (req, res) => {
     include: {
       // telling Sequelize to fetch the joined Blog model. Works because: User.hasMany(Blog)
       model: Blog,
-      // Exclude the userId from each blog (repetition). Redundant: we know whothe author is.
+      // Exclude the userId from each blog (repetition). Redundant: we know who the author is.
       attributes: { exclude: ['userId'] } 
     }
   })
@@ -83,17 +83,20 @@ router.get('/:id', async (req, res, next) => {
       // and blogs on the user's reading list (User.belongsToMany(Blog, { through: ReadingList, as: 'readings' })).
       include: [
         {
+          // Include blogs authored by this user (resolves vwhotheia the unaliased User.hasMany(Blog) association in models/index.js).
           model: Blog,
+          // Omit userId on each returned blog, as we already know the author from the parent user record.
           attributes: { exclude: ['userId'] }
         },
         {
-          // Matching the 'readings' alias defined on User in models/index.js
+          // Target the Blog model for blogs on the user's reading list (via the 'readings' many-to-many association in models/index.js).
           model: Blog,
+          // Use the 'readings' alias so Sequelize separates reading-list blogs from blogs authored by the user (User.hasMany(Blog)).
           as: 'readings',
-          attributes: { exclude: ['userId'] },
-          // Omit join table columns (id, userId, blogId, read, createdAt, updatedAt)
-          // from each blog object inside the 'readings' array with attributes: [].
-          through: { attributes: [] }
+          // Omit userId (redundant creator id) and timestamp fields so each reading-list blog matches exercise specs.
+          attributes: { exclude: ['userId', 'createdAt', 'updatedAt'] },
+          // Pull only 'read' and 'id' from the reading_lists join table (exposed under 'readingList' due to ReadingList's modelName).
+          through: { attributes: ['read', 'id' ] },
         }
       ]
     })

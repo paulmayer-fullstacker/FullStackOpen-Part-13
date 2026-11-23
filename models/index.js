@@ -18,7 +18,18 @@ User.belongsToMany(Blog, { through: ReadingList, as: 'readings' })
 // Using an alias ('readingListUsers') keeps users who have the blog on their reading list distinct from the blog's creator relationship.
 Blog.belongsToMany(User, { through: ReadingList, as: 'readingListUsers' })
 
-// Export single object containing all Db schemas and the synchModels.
+// Direct super many-to-many associations on ReadingList so it can be queried directly
+// or via the many-to-many 'readings' / 'readingListUsers' associations without needing syncModels.
+User.hasMany(ReadingList)
+ReadingList.belongsTo(User)
+// Alias the Blog -> ReadingList association as 'readingList' so nested includes or queries
+// from Blog reference the join entry under 'readingList' rather than Sequelize's default name.
+Blog.hasMany(ReadingList, { as: 'readingList' })
+// Explicitly alias ReadingList -> Blog as 'blog' so querying from ReadingList back to its
+// associated Blog uses 'blog' consistently (avoiding ambiguity should multiple Blog links exist).
+ReadingList.belongsTo(Blog, { as: 'blog' })
+
+// Export all database models from a single entry point (schema migrations now managed by umzug).
 module.exports = {
   Blog,
   User,

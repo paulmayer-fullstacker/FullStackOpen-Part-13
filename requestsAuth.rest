@@ -54,7 +54,7 @@ Content-Type: application/json
 GET {{baseUrl}}/users
 
 ### Get a single user by id
-GET {{baseUrl}}/users/1
+GET {{baseUrl}}/users/2
 
 ### Update a user's name by username
 PUT {{baseUrl}}/users/authenticateduser@gmail.com
