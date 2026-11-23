@@ -4,6 +4,8 @@
 const router = require('express').Router()
 // Import ReadingList, User, and Blog models from the centralised models index.
 const { ReadingList, User, Blog } = require('../models')
+// Import tokenExtractor middleware to authenticate requests via Bearer token.
+const { tokenExtractor } = require('../utils/authMiddleware')
 
 // API Route: POST /api/readinglists POST a new reading list entry object to the Db Readinglist join table.
 // Adds a blog (blogId) to a user's (userId) reading list in the unread state (read: false).
@@ -47,6 +49,57 @@ router.post('/', async (req, res, next) => {
   // catch unforseen errors
   catch (error) {
     // Forward any unexpected database or validation errors to errorHandler
+    next(error)
+  }
+})
+
+// API Route: PUT /api/readinglists/:id PUT a new value in the boolean 'read' field. Authentication required as owner only function.
+// Marks a reading list entry as read (or updates its 'read' boolean status) for the authenticated owner.
+router.put('/:id', tokenExtractor, async (req, res, next) => {
+  try {
+    // Look up the reading list entry by its primary key (:id) from the URL params.
+    const readingListEntry = await ReadingList.findByPk(req.params.id)
+
+    // Guard clause: if NO reading list entry with given id:
+    if (!readingListEntry) {
+      // Return 404 (Not Found),
+      return res.status(404).json({
+        // with suitable error message.
+        error: `Reading list entry with id ${req.params.id} not found`
+      })
+    }
+
+    // Guard clause: Ensure the authenticated user from req.decodedToken owns this entry.
+    // Prevents one user from marking another user's reading list item as read.
+    // if the logged in user is not the reading list owner:
+    if (readingListEntry.userId !== req.decodedToken.id) {
+      // Return 403 (Forbidden),
+      return res.status(403).json({
+        // with suitable error message.
+        error: 'Only the owner of this reading list entry can update its read status'
+      })
+    }
+
+    // Guard clause: Validate that 'read' is explicitly provided as a boolean in the request body.
+    // if req.body.read type NOT boolean:
+    if (typeof req.body.read !== 'boolean') {
+      // Return 400 (Bad Request),
+      return res.status(400).json({
+        // with suitable error message.
+        error: 'The "read" field must be a boolean (true or false)'
+      })
+    }
+
+    // All guard clauses pass: Update the read flag and persist changes to PostgreSQL.
+    readingListEntry.read = req.body.read
+    await readingListEntry.save()
+
+    // Return HTTP 200 (OK) with the updated reading list entry.
+    res.json(readingListEntry)
+  } 
+  // Catch unexpected errors (i.e., DB/Sequelize errors),
+  catch (error) {
+    // and forward them to the centralised errorHandler.
     next(error)
   }
 })

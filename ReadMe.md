@@ -745,3 +745,37 @@ The repository has been extended to expose join-table reading-list details (`rea
 * **REST Client Verification (`requests.rest`)**:
 
   * Tested `GET {{baseUrl}}/users/:id` against PostgreSQL after restarting the server to verify that each entry in `readings` returns a `readingList` object containing `read` (defaulting to `false`) and the join-table `id` (userId and timestamps excluded). This alongside trimmed blog fields and user details (`passwordHash` excluded).
+
+
+  ## Blog List Backend Exercise-23
+
+The repository has been extended to allow authenticated users to mark blogs in their own reading list as read (or update their `read` boolean status) via `PUT /api/readinglists/:id` with `{ "read": true }`. By wiring `tokenExtractor` into the route, verifying reading-list entry existence and ownership against `req.decodedToken.id`, and validating the `read` boolean input before persisting to PostgreSQL, users can update only their own reading-list entries.
+
+### Key Implementations & Enhancements
+
+- **Authenticated Reading List Status Update (`controllers/readingLists.js`)**:
+  - Added `PUT /api/readinglists/:id` protected by `tokenExtractor` so requests require a valid Bearer token (`401 Unauthorized` when missing or invalid) and identify the caller via `req.decodedToken.id`.
+  - Looked up the reading-list entry by primary key (`ReadingList.findByPk(req.params.id)`), returning `404 Not Found` if no matching row exists in `reading_lists`.
+  - Enforced owner-only access by checking `readingListEntry.userId !== req.decodedToken.id`, returning `403 Forbidden` if another user attempts to modify the entry.
+  - Validated that `req.body.read` is a boolean (`typeof req.body.read !== 'boolean'`, returning `400 Bad Request` otherwise), updated `readingListEntry.read`, saved via `await readingListEntry.save()`, and returned the updated record (`200 OK`), forwarding unexpected errors to `errorHandler`.
+
+- **REST Client Verification (`requestsAuth.rest`)**:
+  - Added Exercise-23 request blocks covering owner login (`POST /api/login`), inspecting reading-list entry IDs via `GET /api/users/:id`, updating `read` (`200 OK`), and re-checking `GET /api/users/:id` to confirm `"read": true` is persisted.
+  - Included negative and guard-clause tests verifying `401 Unauthorized` (missing token), `404 Not Found` (non-existent reading-list ID), `400 Bad Request` (non-boolean `read` value), and `403 Forbidden` (a different authenticated user attempting to update someone else's reading-list entry).
+
+### Reading List Status Update Behaviour
+
+| Check / Condition | Outcome & Status | Notes |
+| :--- | :--- | :--- |
+| **Token & Ownership (`tokenExtractor` + `userId` check)** | `401` (invalid/missing token), `403` (not owner) | Only the user who owns the `reading_lists` row (`entry.userId === req.decodedToken.id`) can update it. |
+| **Entry Lookup & Payload (`findByPk` + `boolean` check)** | `404` (missing entry), `400` (non-boolean `read`), `200` (updated) | Updates `read` (e.g., `{ "read": true }`) on the matching reading-list entry and returns the saved row. |
+
+### Files Created & Updated
+
+- **`controllers/readingLists.js`**: Added `PUT /api/readinglists/:id` with `tokenExtractor`, `404` lookup check, `403` ownership check, `400` boolean validation, and `readingListEntry.save()`.
+- **`requestsAuth.rest`**: Added Exercise-23 test requests covering `200 OK` status updates, `GET /api/users/:id` verification, and `401` / `404` / `400` / `403` guard scenarios.
+
+### Testing & Verification
+
+- **REST Client Verification (`requestsAuth.rest`)**:
+  - Verified `PUT {{baseUrl}}/readinglists/:id` with `{ "read": true }` using the owner's Bearer token (`200 OK`), confirmed the updated `"read": true` status via `GET {{baseUrl}}/users/:id`, and verified `401`, `404`, `400`, and `403` responses across the guard tests.

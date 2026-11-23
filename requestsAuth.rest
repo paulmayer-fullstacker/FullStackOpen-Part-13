@@ -209,13 +209,13 @@ Authorization: Bearer {{authToken}}
 
 
 ###
-### READING LIST TESTS
+### READING LIST TESTS ( Ex-22)
 
 ### Add a blog to a user's reading list (valid userId & blogId)
 # Expects: 201 Created with the new ReadingList entry (read defaults to false).
 # Adjust userId and blogId to match existing records in your database if needed.
 POST {{baseUrl}}/readinglists
-Content-Type: application/json
+Content-Type: application/jsonwithout join-table metadata
 
 {
   "userId": 2,
@@ -263,6 +263,80 @@ Content-Type: application/json
 
 ### Get user by id including their reading list (readings)
 # Expects: 200 OK with user fields (excluding passwordHash) and a 'readings' array
-# containing the associated blog objects without join-table metadata.
+# containing the associated blog object.
 GET {{baseUrl}}/users/2
+
+
+### UPDATE 'read' VALUE (Ex-23)
+
+### Login as the reading-list owner (replace with valid credentials)
+# @name loginOwner
+POST http://localhost:3001/api/login
+Content-Type: application/json
+
+{
+  "username": "barrybee@yahoo.com",
+  "password": "secret"
+}
+
+### Inspect the user's reading list to grab a valid readingList.id
+GET http://localhost:3001/api/users/2
+
+### Valid Path (200 OK): Mark reading-list entry as read using owner's token
+PUT http://localhost:3001/api/readinglists/1
+Content-Type: application/json
+Authorization: Bearer {{loginOwner.response.body.token}}
+
+{
+  "read": true
+}
+
+### Verify GET /api/users/:id now reflects "read": true
+GET http://localhost:3001/api/users/2
+
+### Guard Clause Test (401 Unauthorized): Missing Authorization header
+PUT http://localhost:3001/api/readinglists/1
+Content-Type: application/json
+
+{
+  "read": true
+}
+
+### Guard Clause Test (404 Not Found): Non-existent reading-list entry id
+PUT http://localhost:3001/api/readinglists/9999
+Content-Type: application/json
+Authorization: Bearer {{loginOwner.response.body.token}}
+
+{
+  "read": true
+}
+
+### Guard Test (400 Bad Request): Non-boolean value for "read"
+PUT http://localhost:3001/api/readinglists/1
+Content-Type: application/json
+Authorization: Bearer {{loginOwner.response.body.token}}
+
+{
+  "read": "yes"
+}
+
+### Login as a DIFFERENT user to test ownership enforcement
+# @name loginOtherUser
+POST http://localhost:3001/api/login
+Content-Type: application/json
+
+{
+  "username": "deanbug@yahoo.com",
+  "password": "secret"
+}
+
+### Guard Test (403 Forbidden): Authenticated user trying to modify someone else's entry
+PUT http://localhost:3001/api/readinglists/1
+Content-Type: application/json
+Authorization: Bearer {{loginOtherUser.response.body.token}}
+
+{
+  "read": false
+}
+
 
