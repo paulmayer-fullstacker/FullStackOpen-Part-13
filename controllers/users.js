@@ -75,15 +75,35 @@ router.put('/:username', userFindByUsername, async (req, res, next) => {
 // API Route: GET a user by id. Simple/single request by id: manage localy, without middleware.
 router.get('/:id', async (req, res, next) => {
   try {
+    // Build a filter object 'where' for the 'reading_lists' join table based on req.query.read.
+    // Query string values arrive as strings (or undefined when omitted). Thus, check explicit string values.
+    const where = {}
+    if (req.query.read === 'true') {
+      // Filter field where.read=true, to only include reading list entries where read is true.
+      where.read = true
+    } 
+    else if (req.query.read === 'false') {
+      // Filter field: false. Only include reading list entries where read is false.
+      where.read = false
+    }
+    // Guard clause: reject unexpected non-boolean string values (e.g., ?read=maybe). 
+    else if (req.query.read !== undefined) {
+      // if filter field undefined, return 400 (Bad Request),
+      return res.status(400).json({
+        // with suitable error message.
+        error: "Query parameter 'read' must be 'true' or 'false'"
+      })
+    }
+
     // Query Db for user matching the PK (id) provided in the URL parameters (e.g., /api/users/3 : SELECT * FROM users WHERE id = 3 LIMIT 1;
     const user = await User.findByPk(req.params.id, {
       // Exclude the password hash from the user object
       attributes: { exclude: ['passwordHash'] },
-      // Use an array in 'include' to fetch both blogs authored by the user (User.hasMany(Blog)),
+      // Use an array in 'include' to fetch both blogs authored by this user (User.hasMany(Blog)),
       // and blogs on the user's reading list (User.belongsToMany(Blog, { through: ReadingList, as: 'readings' })).
       include: [
         {
-          // Include blogs authored by this user (resolves vwhotheia the unaliased User.hasMany(Blog) association in models/index.js).
+          // Include blogs authored by this user (resolves via the unaliased User.hasMany(Blog) association in models/index.js).
           model: Blog,
           // Omit userId on each returned blog, as we already know the author from the parent user record.
           attributes: { exclude: ['userId'] }
@@ -95,11 +115,13 @@ router.get('/:id', async (req, res, next) => {
           as: 'readings',
           // Omit userId (redundant creator id) and timestamp fields so each reading-list blog matches exercise specs.
           attributes: { exclude: ['userId', 'createdAt', 'updatedAt'] },
-          // Pull only 'read' and 'id' from the reading_lists join table (exposed under 'readingList' due to ReadingList's modelName).
-          through: { attributes: ['read', 'id' ] },
+          // Pull 'read' and 'id' from reading_lists AND filter join rows with 'where'
+          // (empty 'where' = return all reading list entries; { read: true/false } = filter by read status).
+          through: { attributes: ['read', 'id'], where }
         }
       ]
     })
+   
     if (user) {
       // if user found, send the user object back to the client as a JSON response.
       res.json(user)

@@ -747,7 +747,7 @@ The repository has been extended to expose join-table reading-list details (`rea
   * Tested `GET {{baseUrl}}/users/:id` against PostgreSQL after restarting the server to verify that each entry in `readings` returns a `readingList` object containing `read` (defaulting to `false`) and the join-table `id` (userId and timestamps excluded). This alongside trimmed blog fields and user details (`passwordHash` excluded).
 
 
-  ## Blog List Backend Exercise-23
+## Blog List Backend Exercise-23
 
 The repository has been extended to allow authenticated users to mark blogs in their own reading list as read (or update their `read` boolean status) via `PUT /api/readinglists/:id` with `{ "read": true }`. By wiring `tokenExtractor` into the route, verifying reading-list entry existence and ownership against `req.decodedToken.id`, and validating the `read` boolean input before persisting to PostgreSQL, users can update only their own reading-list entries.
 
@@ -779,3 +779,37 @@ The repository has been extended to allow authenticated users to mark blogs in t
 
 - **REST Client Verification (`requestsAuth.rest`)**:
   - Verified `PUT {{baseUrl}}/readinglists/:id` with `{ "read": true }` using the owner's Bearer token (`200 OK`), confirmed the updated `"read": true` status via `GET {{baseUrl}}/users/:id`, and verified `401`, `404`, `400`, and `403` responses across the guard tests.
+
+
+## Blog List Backend Exercise-24
+
+The repository has been extended to allow filtering of a user's `readings` list on `GET /api/users/:id` via an optional `read` query parameter. By parsing `req.query.read` (`'true'`, `'false'`, or omitted), guarding unexpected query values with `400 Bad Request`, and passing a join-table `where` filter into the `readings` `through` options in `controllers/users.js`, callers can retrieve all reading-list entries or restrict results to read or unread blogs while keeping the outer user query intact.
+
+### Key Implementations & Enhancements
+
+- **Query-Based Reading List Filtering (`controllers/users.js`)**:
+  - Updated `GET /api/users/:id` to inspect `req.query.read` and build a join-table `where` filter for `reading_lists` (`where.read = true` when `req.query.read === 'true'`, `where.read = false` when `req.query.read === 'false'`, and an empty `{}` filter when omitted).
+  - Added a guard clause rejecting any other provided `read` query value (`req.query.read !== undefined`) with `400 Bad Request` (`{ error: 'Query parameter "read" must be "true" or "false"' }`).
+  - Applied `through: { attributes: ['read', 'id'], where }` inside the `readings` `include` block so filtering applies to `reading_lists` rows rather than filtering out the parent `User` record.
+
+- **REST Client Verification (`requestsAuth.rest`)**:
+  - Added Exercise-24 request blocks testing `GET {{baseUrl}}/users/:id` without query parameters (full reading list), with `?read=true` (read blogs only), with `?read=false` (unread blogs only), and with an invalid `?read=maybe` value (`400 Bad Request`).
+
+### Single-User Reading List Query Behaviour
+
+| Query / Condition | Filter Applied to `reading_lists` | Expected Response |
+| :--- | :--- | :--- |
+| **`GET /api/users/:id`** (omitted) | No `read` constraint (`where = {}`) | `200 OK` with user details, authored blogs, and all `readings` entries. |
+| **`GET /api/users/:id?read=true`** | `where = { read: true }` | `200 OK` with only `readings` entries marked as read (`true`). |
+| **`GET /api/users/:id?read=false`** | `where = { read: false }` | `200 OK` with only `readings` entries marked as unread (`false`). |
+| **Invalid `read` value** (e.g., `?read=maybe`) | Rejected before querying | `400 Bad Request` with `{ error: 'Query parameter "read" must be "true" or "false"' }`. |
+
+### Files Created & Updated
+
+- **`controllers/users.js`**: Added `req.query.read` parsing and `400` validation in `GET /api/users/:id`, and passed `where` into `through: { attributes: ['read', 'id'], where }` on the `readings` include block.
+- **`requestsAuth.rest`**: Added Exercise-24 verification requests covering unfiltered retrieval, `?read=true`, `?read=false`, and `400 Bad Request` on invalid query values.
+
+### Testing & Verification
+
+- **REST Client Verification (`requestsAuth.rest`)**:
+  - Verified `GET {{baseUrl}}/users/:id` returns the full reading list, `GET {{baseUrl}}/users/:id?read=true` and `GET {{baseUrl}}/users/:id?read=false` return matching subsets under `readings`, and `GET {{baseUrl}}/users/:id?read=maybe` returns `400 Bad Request`.

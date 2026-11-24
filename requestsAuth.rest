@@ -340,3 +340,18 @@ Authorization: Bearer {{loginOtherUser.response.body.token}}
 }
 
 
+### FILTER GET USER BY ID BY READ TRUE/FALSE (EX-24)
+
+### GET user with entire reading list (no query param)
+GET {{baseUrl}}/users/2
+
+### GET user with only read blogs in their reading list (?read=true)
+GET {{baseUrl}}/users/2?read=true
+
+### GET user with only unread blogs (?read=false)
+GET {{baseUrl}}/users/2?read=false
+
+### Guard Test (400 Bad Request) - Invalid ?read value
+GET {{baseUrl}}/users/2?read=maybe
+
+
