@@ -4,7 +4,7 @@ const { Model, DataTypes } = require('sequelize')
 const { sequelize } = require('../utils/db')
 
 class Blog extends Model {}
-// Initialise Blog as a JS object
+// Initialise Blog: Configures the Blog model's columns and database options.
 Blog.init({
   id: {
     type: DataTypes.INTEGER,

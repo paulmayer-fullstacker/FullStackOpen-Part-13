@@ -11,12 +11,13 @@ const { connectToDb } = require('./utils/db')
 // Import Blog and User from our models directory. syncModels removed.
 const { Blog, User } = require('./models')  // Blog and User for test routes.
 
-// Import our modularised blog, user, login and author routers.
+// Import our modularised blog, user, login, author, readingLists and logout routers.
 const blogsRouter = require('./controllers/blogs')
 const userRouter = require('./controllers/users')
 const loginRouter = require('./controllers/login') // Import login router.
 const authorsRouter = require('./controllers/authors')  // Import our authors router.
 const readingListsRouter = require('./controllers/readingLists')  // Import our reading list router.
+const logoutRouter = require('./controllers/logout') // Import logout router to handle DELETE /api/logout requests.
 // Import our centralised error handling middleware
 const { errorHandler } = require('./utils/errorMiddleware')
 
@@ -45,6 +46,7 @@ app.use('/api/users', userRouter)  // Mount users router under /api/users.
 app.use('/api/login', loginRouter) // Mount the login router.
 app.use('/api/authors', authorsRouter)  // Mount the authors router.
 app.use('/api/readinglists', readingListsRouter) // Mount the reading list router.
+app.use('/api/logout', logoutRouter) // Mount the logout router under /api/logout.
 // Mount/register error handler last (after all routes have been defined) so it can intercept any errors passed down the pipeline.
 app.use(errorHandler)
 
@@ -52,9 +54,6 @@ app.use(errorHandler)
 const start = async () => {
   // Establish the Db connection first.
   await connectToDb()
-  // // NOTE: await syncModels() removed as migrations now handle database table creation and schema updates on startup.
-  // // then, synchronise models with the database (applying any schema changes with { alter: true }).
-  // await syncModels()
   // Start the Express server once the Db is successfully connected and migrated.
   app.listen(PORT, () => {
     console.log(`Server running on port ${PORT}`)
@@ -63,18 +62,33 @@ const start = async () => {
 // Boot the application startup process.
 start()
 
-// Terminal 1:
-// psql postgres://postgres:root@localhost:5432/blog_db
-// DROP TABLE IF EXISTS blogs CASCADE;
-// DROP TABLE IF EXISTS users CASCADE;
-// DROP TABLE IF EXISTS migrations CASCADE;
+// ============================================================================
+// psql Quick Reference (Database Reset, Schema Inspection & Exercise-25 Testing)
+// ============================================================================
 
-// Terminal 2:
-// npm start
+// 1. Connect to PostgreSQL:
+//    psql postgres://postgres:root@localhost:5432/blog_db
 
-// Terminal 1:
-// _db# \d
-// Display tables
-// \d users
-// \d blogs
-// _db# \q
+// 2. Full Clean Reset (drops all tables + migration history so Umzug rebuilds from scratch):
+//    DROP TABLE IF EXISTS sessions CASCADE;
+//    DROP TABLE IF EXISTS reading_lists CASCADE;
+//    DROP TABLE IF EXISTS blogs CASCADE;
+//    DROP TABLE IF EXISTS users CASCADE;
+//    DROP TABLE IF EXISTS migrations CASCADE;
+//    \q
+//    (Then run `npm start` in another terminal to re-run all migrations)
+
+// 3. Verify Migrations & Table Schemas:
+//    \dt                         -- List all tables (users, blogs, reading_lists, sessions, migrations)
+//    SELECT * FROM migrations;   -- Confirm all 5 migration files have been executed
+//    \d users                    -- Check columns (including 'disabled' boolean)
+//    \d blogs                    -- Check columns (including 'year' and 'user_id' FK)
+//    \d reading_lists            -- Check join table columns ('user_id', 'blog_id', 'read')
+//    \d sessions                 -- Check active sessions columns ('id', 'user_id', 'token', timestamps)
+
+// 4. Inspect & Test Exercise-25 Sessions / Disabled Users:
+//    SELECT id, username, disabled FROM users;
+//    SELECT id, user_id, LEFT(token, 25) AS token_preview, created_at FROM sessions;
+//    UPDATE users SET disabled = true WHERE username = 'user@example.com';   -- Disable account
+//    UPDATE users SET disabled = false WHERE username = 'user@example.com';  -- Re-enable account
+//    \q

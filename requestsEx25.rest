@@ -1,0 +1,135 @@
+### requestsEx25.rest
+
+### Exercise-25: Server-Side Sessions, Logout & Disabled Users Test Script
+### Run each request in order using VS Code REST Client ("Send Request").
+### Adjust port, test credentials, and sample blog payload if your routes differ.
+
+@baseUrl = http://localhost:3001/api
+@username = testuser@example.com
+@password = secret
+@token = eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJ1c2VybmFtZSI6InRlc3R1c2VyQGV4YW1wbGUuY29tIiwiaWQiOjksImlhdCI6MTc5NTgyODA3N30.DdQkx-WxYHJWjxj_MijZbDcCPLVIBYY4fJHPpasiYVc
+
+
+
+### Create a Test User (if not already in PostgreSQL)
+### Expected: 201 Created (or 400 if user already exists).
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "name": "Test User",
+  "password": "{{password}}"
+}
+
+
+### Login -> Creates a Row in `sessions` Table & Returns JWT
+### Expected: 200 OK with { token, username, name }.
+### Action: Copy the returned `token` value into `@token` above before Steps 3-7.
+### Verify in psql: SELECT * FROM sessions; (should see 1 new row for this user).
+# @name login
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### psql postgres://postgres:root@localhost:5432/blog_db
+### SELECT * FROM sessions;
+
+
+### Access a Protected Route With Active Session & Enabled User
+### Expected: 201 Created (or 200 OK depending on your POST /api/blogs handler).
+### Proves: Valid JWT + active `sessions` row + `users.disabled = false` succeeds.
+POST {{baseUrl}}/blogs
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Session Check Before Logout",
+  "author": "Test User",
+  "url": "https://example.com/session-before-logout",
+  "likes": 1
+}
+
+
+### Logout -> Deletes Active Session Row From `sessions` Table
+### Expected: 204 No Content.
+### Verify in psql: SELECT * FROM sessions; (session row for @token is gone)
+DELETE {{baseUrl}}/logout
+Authorization: Bearer {{token}}
+
+
+### Reuse the Same Token After Logout (Must Fail Even Though JWT Is Valid)
+### Expected: 401 Unauthorized with { "error": "session invalid" }.
+### Proves: Server-side session check blocks logged-out tokens immediately.
+POST {{baseUrl}}/blogs
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Should Fail After Logout",
+  "author": "Test User",
+  "url": "https://example.com/session-after-logout",
+  "likes": 1
+}
+
+
+### Log In Again & Disable the User in PostgreSQL
+### Action:
+###   a) Run POST /api/login below and paste the fresh `token` into `@token`.
+###   b) In psql, run:
+###        UPDATE users SET disabled = true WHERE username = 'testuser@example.com';
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+
+### Attempt Protected Route While User Is Disabled (With Existing Token)
+### Expected: 403 Forbidden with { "error": "account disabled" }.
+### Proves: Even an active session / valid JWT is rejected once disabled = true.
+POST {{baseUrl}}/blogs
+Content-Type: application/json
+Authorization: Bearer {{token}}
+
+{
+  "title": "Should Fail When Disabled",
+  "author": "Test User",
+  "url": "https://example.com/disabled-user-request",
+  "likes": 1
+}
+
+
+### Attempt Login While User Is Disabled
+### Expected: 401 Unauthorized with { "error": "account disabled" }.
+### Proves: Disabled accounts cannot start new sessions or receive new tokens.
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+
+### Re-Enable User in PostgreSQL & Confirm Login Works Again
+### Action:
+###   a) In psql, run:
+###        UPDATE users SET disabled = false WHERE username = 'testuser@example.com';
+###   b) Run POST /api/login below.
+### Expected: 200 OK with a new `token`, and a new row appears in `sessions`.
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "username": "{{username}}",
+  "password": "{{password}}"
+}
+
+### DELETE FROM sessions;

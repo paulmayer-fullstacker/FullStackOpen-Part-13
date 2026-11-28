@@ -813,3 +813,76 @@ The repository has been extended to allow filtering of a user's `readings` list 
 
 - **REST Client Verification (`requestsAuth.rest`)**:
   - Verified `GET {{baseUrl}}/users/:id` returns the full reading list, `GET {{baseUrl}}/users/:id?read=true` and `GET {{baseUrl}}/users/:id?read=false` return matching subsets under `readings`, and `GET {{baseUrl}}/users/:id?read=maybe` returns `400 Bad Request`.
+
+
+
+## Blog List Backend Exercise-25
+
+The repository has been extended to enforce server-side session tracking, explicit token revocation on logout, and account-level `disabled` status enforcement across authentication and protected routes. By persisting active login tokens in a PostgreSQL `sessions` table, deleting session rows on `DELETE /api/logout`, and checking both session validity and `user.disabled` inside `tokenExtractor` and `POST /api/login`, revoked tokens and disabled users are rejected immediately.
+
+### Key Implementations & Enhancements
+
+- **Sessions Migration & Model (`migrations/` & `models/session.js`, `models/index.js`)**:
+  - Added a migration to create the `sessions` table storing `id`, `user_id` (referencing `users.id`), `token`, and timestamps, with `up` and `down` support via `umzug`.
+  - Created the `Session` Sequelize model (`underscored: true`) and registered `Session` with `User` associations in `models/index.js`.
+
+- **Session Creation & Disabled-User Login Guard (`controllers/login.js`)**:
+  - Updated `POST /api/login` to check `user.disabled` before issuing a token, returning `401 Unauthorized` (`{ error: 'account disabled' }`) when the account is disabled.
+  - Persisted a new `Session` row (`userId`, `token`) upon successful login while leaving any existing session rows intact (supporting multiple active sessions across clients/devices).
+
+- **Logout Endpoint (`controllers/logout.js` & `index.js`)**:
+  - Implemented `DELETE /api/logout` protected by `tokenExtractor` to delete the matching `Session` row (`token` and `userId`) from `sessions` and return `204 No Content`.
+  - Mounted `logoutRouter` at `/api/logout` in `index.js` ahead of `errorHandler`.
+
+- **Centralised Session & Account Check (`utils/authMiddleware.js`)**:
+  - Extended `tokenExtractor` to verify the JWT signature (`401 Unauthorized` with `{ error: 'token invalid' }` on failure), confirm an active matching row exists in `sessions` (`401 Unauthorized` with `{ error: 'session invalid' }` if logged out/missing), and verify `User` exists and `!user.disabled` (`403 Forbidden` with `{ error: 'account disabled' }` when disabled).
+
+### Session & Disabled-User Enforcement Behaviour
+
+| Endpoint / Flow | Condition | Outcome & Status |
+| :--- | :--- | :--- |
+| **`POST /api/login`** | Account `disabled: true` | `401 Unauthorized` (`{ error: 'account disabled' }`), no session row created. |
+| **`POST /api/login`** | Account enabled & valid credentials | `200 OK` with `{ token, username, name }` and a new `sessions` row. |
+| **`DELETE /api/logout`** | Valid Bearer token with active session | Deletes matching `sessions` row and returns `204 No Content`. |
+| **Protected route (`tokenExtractor`)** | Token removed from `sessions` (post-logout) | `401 Unauthorized` (`{ error: 'session invalid' }`). |
+| **Protected route (`tokenExtractor`)** | User `disabled: true` (even with active session) | `403 Forbidden` (`{ error: 'account disabled' }`). |
+
+### Files Created & Updated
+
+- **`migrations/<timestamp>_add_sessions.js`**: Created migration defining the `sessions` table with `up` and `down` methods.
+- **`models/session.js` & `models/index.js`**: Added the `Session` model and linked associations in the central models index.
+- **`controllers/login.js`**: Added disabled-account check on login and `Session.create(...)` persistence.
+- **`controllers/logout.js` & `index.js`**: Created `DELETE /api/logout` handler and mounted it at `/api/logout`.
+- **`utils/authMiddleware.js`**: Added `Session.findOne(...)` and `user.disabled` enforcement inside `tokenExtractor`.
+- **`requestsEx25.rest` & `requestsAll.rest`**: Added Exercise-25 test requests and full regression suite covering sessions, logout, and disabled users.
+
+### Testing & Verification
+
+- **REST Client & `psql` Verification (`requestsEx25.rest` & `requestsAll.rest`)**:
+  - Verified login creates a `sessions` row and allows protected requests (`201 Created`), `DELETE /api/logout` removes the session row (`204 No Content`), reusing a logged-out token returns `401 Unauthorized` (`session invalid`), disabling a user in `psql` blocks both existing tokens (`403 Forbidden`) and new logins (`401 Unauthorized`), and re-enabling restores normal login (`200 OK`).
+  - Post Exercise-25, employ `requestsAll.rest` for full end-to-end project tests (All endpoints).
+
+
+## Note on Excluding PasswordHash
+
+### Alternative Approach: Hiding `passwordHash` via `toJSON()` Instead of `defaultScope` & `unscoped()`
+
+Instead of excluding `passwordHash` at the SQL query level with `defaultScope` in `models/user.js` and opting in with `User.unscoped()` in `controllers/login.js`, a `toJSON()` instance method can be defined on the `User` model to strip `passwordHash` during JSON serialization (a pattern seen in Classsed tutorials: https://www.youtube.com/watch?v=3qlnR9hK-lQ#:~:text=TypeORM%20Tutorial%20(Seamless%20Typescript%20ORM)%20Classsed%E2%80%A228K%20views.,hasMany%2C%20belongsToMany)%20WittCode%E2%80%A261K%20views.%20Redis%20Crash%20Course.
+
+#### Example `toJSON()` Implementation on `User`
+
+```js
+toJSON() {
+  const values = { ...this.get() }
+  delete values.passwordHash
+  return values
+}
+```
+
+#### How It Differs From `defaultScope` + `unscoped()`
+
+* **Query vs. Serialization:** `defaultScope` with `attributes: { exclude: ['passwordHash'] }` prevents PostgreSQL from selecting `password_hash` in normal `SELECT` queries, requiring `User.unscoped()` in `controllers/login.js` when `bcrypt.compare` needs `user.passwordHash`. By contrast, `toJSON()` runs automatically when Express serializes a model instance via `res.json(...)`, so `passwordHash` can still be present on the model instance in memory (such as during login or right after `User.create(...)`) without being sent in the HTTP JSON response.
+* **Trade-offs in This Project:**
+  * **Advantage:** Avoids needing `.unscoped()` on login queries and removes `passwordHash` even on objects returned directly from `User.create(...)` without an extra `findByPk` call.
+  * **Dissadvantage:** `password_hash` is still fetched from the database on normal queries unless also excluded in query attributes or `defaultScope`, and any internal code inspecting `user.passwordHash` directly in memory would still see it if loaded.
+

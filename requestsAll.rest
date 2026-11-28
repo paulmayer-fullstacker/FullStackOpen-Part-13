@@ -1,0 +1,455 @@
+### requestsAll.rest:
+
+### Unified VS Code REST Client Test Suite — FullStackOpen Part 13 (Chapter 4)
+### Run requests sequentially from top to bottom using "Send Request".
+###
+### Pre-requisite:
+###   1. Fresh clean seed before starting: run `npm run seed` in terminal.
+###      Seeded users:
+###        - barrybee@yahoo.com / secret (owns the 3 seeded blogs)
+###        - deanbug@yahoo.com  / secret (second user for 403 ownership tests)
+###   2. Start the server: `npm start` (runs migrations and listens on port 3001).
+### ============================================================================
+
+@baseUrl = http://localhost:3001/api
+@healthUrl = http://localhost:3001
+
+# Seeded & test credentials
+@user1Email = barrybee@yahoo.com
+@user2Email = deanbug@yahoo.com
+@password = secret
+
+# Automatic response captures via VS Code REST Client (`# @name ...`).
+# Re-running a tagged request updates the corresponding variable automatically.
+@user1Token = {{loginUser1.response.body.token}}
+@user2Token = {{loginUser2.response.body.token}}
+@user1Id = {{createUser1.response.body.id}}
+@user2Id = {{createUser2.response.body.id}}
+@createdBlogId = {{createBlogUser1.response.body.id}}
+@readingListId1 = {{addReadingList1.response.body.id}}
+@readingListId2 = {{addReadingList2.response.body.id}}
+
+
+### ============================================================================
+### 1. HEALTH CHECK & DATABASE RESET
+### ============================================================================
+
+### 1.1 Health check -> Expected: 200 OK ("OK")
+GET {{healthUrl}}/
+
+### 1.2 Get all users (Confirm Seeding).
+GET {{baseUrl}}/users
+
+
+### 1.3 Reset database tables -> Expected: 204 No Content
+### Clears users, blogs, reading_lists, and sessions so tests start deterministically.
+POST {{baseUrl}}/reset
+
+
+### ============================================================================
+### 2. USER CREATION, PASSWORD HASH EXCLUSION & VALIDATION
+### ============================================================================
+
+### 2.1 Create User 1 -> Expected: 201 Created
+### Verifies `passwordHash` is omitted via `User.findByPk` + `defaultScope`, and `disabled` defaults to false.
+# @name createUser1
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "username": "{{user1Email}}",
+  "name": "Barry Bee",
+  "password": "{{password}}"
+}
+
+
+### 2.2 Create User 2 -> Expected: 201 Created
+# @name createUser2
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "username": "{{user2Email}}",
+  "name": "Dean Bug",
+  "password": "{{password}}"
+}
+
+
+### 2.3 Invalid username validation -> Expected: 400 Bad Request
+### `username` uses `isEmail` validation; `errorHandler` maps Sequelize errors to 400.
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "username": "not-an-email",
+  "name": "Invalid Email User",
+  "password": "{{password}}"
+}
+
+
+### 2.4 Duplicate username -> Expected: 400 Bad Request
+### Unique constraint on `users.username` triggers a Sequelize error caught as 400.
+POST {{baseUrl}}/users
+Content-Type: application/json
+
+{
+  "username": "{{user1Email}}",
+  "name": "Duplicate Barry",
+  "password": "{{password}}"
+}
+
+
+### 2.5 List all users -> Expected: 200 OK
+### Confirms `passwordHash` never appears on any user object.
+GET {{baseUrl}}/users
+
+
+### 2.6 Update user's name by username -> Expected: 200 OK
+### Uses `userFindByUsername` middleware and saves updated `name`.
+PUT {{baseUrl}}/users/{{user1Email}}
+Content-Type: application/json
+
+{
+  "name": "Barry B. Bee"
+}
+
+
+### 2.7 Update non-existent user -> Expected: 404 Not Found
+PUT {{baseUrl}}/users/nonexistent@example.com
+Content-Type: application/json
+
+{
+  "name": "Ghostly User"
+}
+
+
+### ============================================================================
+### 3. LOGIN & SESSION CREATION (EXERCISE-25)
+### ============================================================================
+
+### 3.1 Login User 1 -> Expected: 200 OK with { token, username, name }
+### Uses `User.unscoped()` internally to verify password, then inserts a row into `sessions`.
+### Check in to psql: psql postgres://postgres:root@localhost:5432/blog_db
+### and run: `SELECT id, user_id, LEFT(token, 20) AS token_prefix FROM sessions;`
+### or: `SELECT * FROM sessions;`, to show full web token.
+# @name loginUser1
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "username": "{{user1Email}}",
+  "password": "{{password}}"
+}
+
+
+### 3.2 Login User 2 -> Expected: 200 OK with { token, username, name }
+# @name loginUser2
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "username": "{{user2Email}}",
+  "password": "{{password}}"
+}
+
+
+### 3.3 Login with wrong password -> Expected: 401 Unauthorized ("invalid username or password")
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "username": "{{user1Email}}",
+  "password": "wrongpassword"
+}
+
+
+### 3.4 Login with unknown user -> Expected: 401 Unauthorized ("invalid username or password")
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "username": "nobody@example.com",
+  "password": "{{password}}"
+}
+
+
+### ============================================================================
+### 4. BLOGS: AUTHENTICATION, CRUD, SEARCH, LIKES & OWNERSHIP
+### ============================================================================
+
+### 4.1 Create blog without token -> Expected: 401 Unauthorized ("token missing")
+POST {{baseUrl}}/blogs
+Content-Type: application/json
+
+{
+  "title": "Unauthorized Blog",
+  "author": "Anonymous",
+  "url": "https://example.com/unauth",
+  "likes": 1,
+  "year": 2024
+}
+
+
+### 4.2 Create blog with malformed token -> Expected: 401 Unauthorized ("token invalid")
+POST {{baseUrl}}/blogs
+Content-Type: application/json
+Authorization: Bearer invalid.jwt.token
+
+{
+  "title": "Bad Token Blog",
+  "author": "Anonymous",
+  "url": "https://example.com/bad-token",
+  "likes": 1,
+  "year": 2024
+}
+
+
+### 4.3 Create Blog A as User 1 -> Expected: 201 Created
+### Links blog to `req.decodedToken.id` (User 1).
+# @name createBlogUser1
+POST {{baseUrl}}/blogs
+Content-Type: application/json
+Authorization: Bearer {{user1Token}}
+
+{
+  "title": "Test Blog Alpha Created",
+  "author": "Barry Bee",
+  "url": "https://example.com/test-blog-Alpha",
+  "likes": 15,
+  "year": 2024
+}
+
+
+### 4.4 Create Blog B as User 1 -> Expected: 201 Created
+# @name createBlogUser1Second
+POST {{baseUrl}}/blogs
+Content-Type: application/json
+Authorization: Bearer {{user1Token}}
+
+{
+  "title": "Test Blog Beta Created",
+  "author": "Dean Bug",
+  "url": "https://example.com/test-blog-Beta",
+  "likes": 25,
+  "year": 2025
+}
+
+
+### 4.5 Create blog with invalid year (< 1991) -> Expected: 400 Bad Request
+POST {{baseUrl}}/blogs
+Content-Type: application/json
+Authorization: Bearer {{user1Token}}
+
+{
+  "title": "Too Old Blog",
+  "author": "Barry Bee",
+  "url": "https://example.com/too-old",
+  "likes": 0,
+  "year": 1990
+}
+
+
+### 4.6 Get all blogs (ordered by likes DESC, includes user without passwordHash) -> Expected: 200 OK
+GET {{baseUrl}}/blogs
+
+
+### 4.7 Search blogs case-insensitively by title or author -> Expected: 200 OK
+### Matches "React Patterns and Hooks" (title) and "Dean Bug" (author).
+GET {{baseUrl}}/blogs?search=Beta
+
+
+### 4.8 Update likes on Blog A -> Expected: 200 OK
+PUT {{baseUrl}}/blogs/{{createdBlogId}}
+Content-Type: application/json
+
+{
+  "likes": 30
+}
+
+
+### 4.9 Update likes on non-existent blog -> Expected: 404 Not Found
+PUT {{baseUrl}}/blogs/999999
+Content-Type: application/json
+
+{
+  "likes": 10
+}
+
+
+### 4.10 Non-owner (User 2) tries to delete User 1's blog -> Expected: 403 Forbidden
+DELETE {{baseUrl}}/blogs/{{createdBlogId}}
+Authorization: Bearer {{user2Token}}
+
+
+### 4.11 Owner (User 1) deletes own blog -> Expected: 204 No Content
+DELETE {{baseUrl}}/blogs/{{createdBlogId}}
+Authorization: Bearer {{user1Token}}
+
+
+### ============================================================================
+### 5. AUTHORS AGGREGATION ENDPOINT
+### ============================================================================
+
+### 5.1 Get authors summary (COUNT of blogs, SUM of likes, ordered by likes DESC) -> Expected: 200 OK
+GET {{baseUrl}}/authors
+
+
+### ============================================================================
+### 6. READING LISTS & FILTERED USER PROFILE
+### ============================================================================
+
+### 6.1 Add Blog B to User 1's reading list -> Expected: 201 Created (read defaults to false)
+# @name addReadingList1
+POST {{baseUrl}}/readinglists
+Content-Type: application/json
+
+{
+  "userId": {{user1Id}},
+  "blogId": {{createBlogUser1Second.response.body.id}}
+}
+
+
+### 6.2 Add Blog B to User 2's reading list -> Expected: 201 Created
+# @name addReadingList2
+POST {{baseUrl}}/readinglists
+Content-Type: application/json
+
+{
+  "userId": {{user2Id}},
+  "blogId": {{createBlogUser1Second.response.body.id}}
+}
+
+
+### 6.3 Missing userId or blogId -> Expected: 400 Bad Request
+POST {{baseUrl}}/readinglists
+Content-Type: application/json
+
+{
+  "userId": {{user1Id}}
+}
+
+
+### 6.4 Non-owner (User 2) tries to update User 1's reading list entry -> Expected: 403 Forbidden
+PUT {{baseUrl}}/readinglists/{{readingListId1}}
+Content-Type: application/json
+Authorization: Bearer {{user2Token}}
+
+{
+  "read": true
+}
+
+
+### 6.5 Invalid `read` type (non-boolean) -> Expected: 400 Bad Request
+PUT {{baseUrl}}/readinglists/{{readingListId1}}
+Content-Type: application/json
+Authorization: Bearer {{user1Token}}
+
+{
+  "read": "yes"
+}
+
+
+### 6.6 Owner (User 1) marks reading list entry as read -> Expected: 200 OK (`read: true`)
+PUT {{baseUrl}}/readinglists/{{readingListId1}}
+Content-Type: application/json
+Authorization: Bearer {{user1Token}}
+
+{
+  "read": true
+}
+
+
+### 6.7 Get User 1 profile with all reading list entries -> Expected: 200 OK
+GET {{baseUrl}}/users/{{user1Id}}
+
+
+### 6.8 Filter User 1 reading list by ?read=true -> Expected: 200 OK
+GET {{baseUrl}}/users/{{user1Id}}?read=true
+
+
+### 6.9 Filter User 1 reading list by ?read=false -> Expected: 200 OK
+GET {{baseUrl}}/users/{{user1Id}}?read=false
+
+
+### 6.10 Invalid ?read= query param -> Expected: 400 Bad Request
+GET {{baseUrl}}/users/{{user1Id}}?read=maybe
+
+
+### 6.11 Get non-existent user by id -> Expected: 404 Not Found
+GET {{baseUrl}}/users/999999
+
+
+### ============================================================================
+### 7. LOGOUT & DISABLED USER ENFORCEMENT (EXERCISE-25)
+### ============================================================================
+
+### 7.1 Logout User 2 -> Expected: 204 No Content
+### Deletes User 2's session row from `sessions`.
+### Check in to psql: psql postgres://postgres:root@localhost:5432/blog_db
+### and run in psql: `SELECT * FROM sessions WHERE user_id = <user2Id>;` (should be empty).
+### <user2Id> ~= 12 or 13, currently
+### also run SELECT * FROM sessions;
+DELETE {{baseUrl}}/logout
+Authorization: Bearer {{user2Token}}
+
+
+### 7.2 Reuse User 2's logged-out token -> Expected: 401 Unauthorized ("session invalid")
+POST {{baseUrl}}/blogs
+Content-Type: application/json
+Authorization: Bearer {{user2Token}}
+
+{
+  "title": "Post-Logout Attempt",
+  "author": "Dean Bug",
+  "url": "https://example.com/post-logout",
+  "likes": 1,
+  "year": 2024
+}
+
+
+### 7.3 Disable User 1 in psql before running 7.4 and 7.5:
+### Run in psql:
+###   UPDATE users SET disabled = true WHERE username = 'barrybee@yahoo.com';
+
+
+### 7.4 Protected request with disabled user's active token -> Expected: 403 Forbidden ("account disabled")
+### Even though User 1 still has a valid JWT and session row, `tokenExtractor` rejects disabled accounts.
+POST {{baseUrl}}/blogs
+Content-Type: application/json
+Authorization: Bearer {{user1Token}}
+
+{
+  "title": "Disabled User Blog Attempt",
+  "author": "Barry Bee",
+  "url": "https://example.com/disabled-attempt",
+  "likes": 1,
+  "year": 2024
+}
+
+
+### 7.5 Login attempt while User 1 is disabled -> Expected: 401 Unauthorized ("account disabled")
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "username": "{{user1Email}}",
+  "password": "{{password}}"
+}
+
+
+### 7.6 Re-enable User 1 in psql before running 7.7:
+### Run in psql:
+###   UPDATE users SET disabled = false WHERE username = 'barrybee@yahoo.com';
+
+
+### 7.7 Login after re-enabling User 1 -> Expected: 200 OK with new token
+### Note the old token has not been superseded or revoked by the new token.
+### Assume logged in on two separate devices.
+# @name loginUser1AfterReenable
+POST {{baseUrl}}/login
+Content-Type: application/json
+
+{
+  "username": "{{user1Email}}",
+  "password": "{{password}}"
+}

@@ -42,12 +42,17 @@ router.post('/', async (req, res, next) => {
     const saltRounds = 10
     const passwordHash = await bcrypt.hash(password, saltRounds)
     // Insert new row in the table using the JSON data sent by the client (req.body). 'await' the Db operation to finish.
-    const user = await User.create({
+    // Use `newUser` since `User.create()` returns the inserted instance including fields passed into `create()`
+    //  (such as `passwordHash`), bypassing `defaultScope`.
+    const newUser = await User.create({
       username,
       name,
       passwordHash
     })
+    // Re-query by primary key so Sequelize applies `User`'s `defaultScope` (`attributes: { exclude: ['passwordHash'] }`) and omits `passwordHash`.
+    const user = await User.findByPk(newUser.id)
     // If success: send an HTTP 201 (Created) code back to client, with newly created user object (as JSON), inc. its new Db id.
+    // Return the re-fetched `user` instance so `passwordHash` is not exposed in JSON.
     res.status(201).json(user)
     // else: catch error. Problem, e.g., missing a required field like 'user name'.
   } catch(error) {
